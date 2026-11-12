@@ -56,6 +56,7 @@ async function initSupabase(){
   supabase=mod.createClient(settings.supabaseUrl,settings.supabaseAnonKey);
   const {data:{session}}=await supabase.auth.getSession();
   showAuth(session?.user);
+  loadPublicWriters();
   supabase.auth.onAuthStateChange((_event,s)=>{showAuth(s?.user);if(s?.user)loadOrders();});
  }catch(err){showNotice("authStatus","Secure account service is currently unavailable.","error")}
 }
@@ -66,7 +67,7 @@ async function checkAdmin(user){
  const {data,error} = await supabase.from("peh_admins").select("user_id").eq("user_id",user.id).maybeSingle();
  currentAdmin = !error && Boolean(data);
  $("admin").classList.toggle("hidden",!currentAdmin);
- if(currentAdmin) await loadAdmin();
+ if(currentAdmin) { await loadAdmin(); await loadWriterAdmin(); }
 }
 function showAuth(user){
  if(!supabase)return;
@@ -205,4 +206,77 @@ async function saveAdminOrder(id){
 $("adminFilter").addEventListener("change",renderAdminOrders);
 $("refreshAdmin").addEventListener("click",loadAdmin);
 
+
+/* Real specialist profiles: all changes are protected by PEH Supabase RLS.
+ * Client-side admin checks control visibility, not database authorization. */
+let approvedWriters=[];
+let adminWriters=[];
+function writerInitials(name){return name.trim().split(/\\s+/).slice(0,2).map(p=>p[0]?.toUpperCase()||"").join("");}
+function linesToArray(id){return $(id).value.split(/\\r?\\n/).map(x=>x.trim()).filter(Boolean);}
+function approvedProfileCard(w){
+ const labels=(w.skills||[]).slice(0,5).map(x=>'<span class="tag">'+escapeHtml(x)+'</span>').join("");
+ return '<article class="writer-card"><div class="avatar" aria-hidden="true">'+escapeHtml(writerInitials(w.display_name))+'</div><div class="role">'+escapeHtml(w.specialty)+'</div><h3>'+escapeHtml(w.display_name)+'</h3><p class="bio">'+escapeHtml(w.biography||"Professional PEH specialist")+'</p><div class="tags">'+labels+'</div><div class="writer-footer"><span class="demo-tag">PEH specialist</span><button type="button" class="button secondary real-profile" data-id="'+escapeHtml(w.id)+'">View profile →</button></div></article>';
+}
+function showRealProfile(id){
+ const w=approvedWriters.find(v=>v.id===id);if(!w)return;
+ const links=(w.portfolio_links||[]).filter(url=>/^https:\/\//i.test(url)).map(url=>'<li><a class="text-link" target="_blank" rel="noopener noreferrer" href="'+escapeHtml(url)+'">'+escapeHtml(url)+'</a></li>').join("");
+ $("profileContent").innerHTML='<span class="eyebrow">PEH PROFESSIONAL PROFILE</span><div class="avatar">'+escapeHtml(writerInitials(w.display_name))+'</div><h2>'+escapeHtml(w.display_name)+'</h2><strong>'+escapeHtml(w.specialty)+'</strong><p>'+escapeHtml(w.biography||"")+'</p>'+section("Areas of expertise",w.skills||[],"Details coming soon")+section("Qualifications",w.qualifications||[],"No published qualifications")+section("Achievements",w.achievements||[],"No published achievements")+'<section class="profile-section"><h4>Portfolio</h4>'+(links?'<ul>'+links+'</ul>':'<p class="muted">No portfolio links published yet</p>')+'</section><a href="#request" class="button primary" id="selectRealWriter">Request this specialist →</a>';
+ $("profileModal").showModal();
+ $("selectRealWriter").addEventListener("click",()=>{$("profileModal").close(); $("writerInput").value=w.id;});
+}
+async function loadPublicWriters(){
+ if(!supabase)return;
+ const {data,error}=await supabase.from("peh_writers").select("id,display_name,specialty,biography,skills,qualifications,achievements,portfolio_links").eq("published",true).order("created_at",{ascending:false});
+ if(error)return; // Until the migration is applied, the sample preview remains clearly marked.
+ approvedWriters=data||[];
+ if(approvedWriters.length){
+  $("writersGrid").innerHTML=approvedWriters.map(approvedProfileCard).join("");
+  $("writerInput").innerHTML='<option value="">No preference</option>'+approvedWriters.map(w=>'<option value="'+escapeHtml(w.id)+'">'+escapeHtml(w.display_name)+'</option>').join("");
+  document.querySelectorAll(".real-profile").forEach(btn=>btn.addEventListener("click",()=>showRealProfile(btn.dataset.id)));
+  const note=document.querySelector("#writers .notice");
+  if(note)note.textContent="Profiles shown here have been approved for publication by PEH. Verify specific qualifications with the team when selecting a specialist.";
+ }else{
+  $("writerInput").innerHTML='<option value="">No preference</option>';
+  $("writersGrid").innerHTML='<div class="panel writer-empty"><h3>Our specialist profiles are being prepared</h3><p>Verified professional profiles will appear here as our team publishes them. You can request a service without choosing a specialist.</p></div>';
+  const note=document.querySelector("#writers .notice");
+  if(note)note.textContent="Only permissioned, PEH-approved professional profiles will be published.";
+ }
+}
+function resetWriterEditor(){
+ $("writerEditorForm").reset();$("editingWriterId").value="";
+}
+function renderWriterAdmin(){
+ $("writerAdminList").innerHTML=adminWriters.length?adminWriters.map(w=>'<div class="admin-order"><div class="admin-order-heading"><strong>'+escapeHtml(w.display_name)+'</strong><span class="tag">'+(w.published?'Published':'Draft')+'</span></div><p>'+escapeHtml(w.specialty)+'</p><button type="button" class="button secondary edit-writer" data-id="'+escapeHtml(w.id)+'">Edit specialist</button></div>').join(""):'<p class="muted">No specialist profiles created yet.</p>';
+ document.querySelectorAll(".edit-writer").forEach(btn=>btn.addEventListener("click",()=>editWriter(btn.dataset.id)));
+}
+function editWriter(id){
+ const w=adminWriters.find(x=>x.id===id);if(!w)return;
+ const fields=[["writerName","display_name"],["writerSpecialty","specialty"],["writerBio","biography"],["writerSkills","skills"],["writerQualifications","qualifications"],["writerAchievements","achievements"],["writerPortfolio","portfolio_links"]];
+ for(const [el,key] of fields)$(el).value=Array.isArray(w[key])?w[key].join("\\n"):(w[key]||"");
+ $("editingWriterId").value=w.id;$("writerPublish").checked=!!w.published;
+ $("writerEditorForm").scrollIntoView({behavior:"smooth",block:"center"});
+}
+async function loadWriterAdmin(){
+ if(!supabase||!currentAdmin)return;
+ const {data,error}=await supabase.from("peh_writers").select("id,display_name,specialty,biography,skills,qualifications,achievements,portfolio_links,published,created_at").order("created_at",{ascending:false});
+ if(error){showNotice("writerAdminStatus","To enable writer profiles, apply supabase-writers-migration.sql from GitHub in your Supabase SQL Editor. "+error.message,"error");return;}
+ adminWriters=data||[];renderWriterAdmin();
+ showNotice("writerAdminStatus",adminWriters.length+" specialist profile(s) loaded.","success");
+}
+$("writerReset").addEventListener("click",resetWriterEditor);
+$("writerEditorForm").addEventListener("submit",async event=>{
+ event.preventDefault();
+ if(!supabase||!currentAdmin)return showNotice("writerAdminStatus","Only an authorized PEH administrator can manage profiles.","error");
+ const links=linesToArray("writerPortfolio");
+ if(links.some(url=>!/^https:\/\//i.test(url)))return showNotice("writerAdminStatus","Portfolio links must start with https://","error");
+ const obj={display_name:$("writerName").value.trim(),specialty:$("writerSpecialty").value.trim(),biography:$("writerBio").value.trim(),skills:linesToArray("writerSkills"),qualifications:linesToArray("writerQualifications"),achievements:linesToArray("writerAchievements"),portfolio_links:links,published:$("writerPublish").checked};
+ const id=$("editingWriterId").value;
+ const {error}=id?await supabase.from("peh_writers").update(obj).eq("id",id):await supabase.from("peh_writers").insert(obj);
+ if(error)return showNotice("writerAdminStatus","Profile could not be saved: "+error.message,"error");
+ resetWriterEditor();
+ showNotice("writerAdminStatus","Specialist profile saved successfully.","success");
+ await loadWriterAdmin();await loadPublicWriters();
+});
+
 initSupabase();
+
