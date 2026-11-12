@@ -17,8 +17,8 @@ create index if not exists peh_revisions_order_created_idx
   on public.peh_revisions (order_id,created_at desc);
 alter table public.peh_revisions enable row level security;
 revoke all on public.peh_revisions from anon;
-grant select,insert to authenticated on public.peh_revisions;
-grant update (status,admin_note) to authenticated on public.peh_revisions;
+grant select, insert on public.peh_revisions to authenticated;
+grant update (status, admin_note) on public.peh_revisions to authenticated;
 
 drop policy if exists "student and admin read revisions" on public.peh_revisions;
 create policy "student and admin read revisions"
