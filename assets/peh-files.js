@@ -7,10 +7,38 @@
  if(!form)return;
  const BUCKET="peh-order-files";
  const allowed=new Set(["pdf","doc","docx","txt","xls","xlsx","csv","ppt","pptx","png","jpg","jpeg"]);
- const maxBytes=5*1024*1024;
+ const maxBytes=50*1024*1024;
  const $=id=>document.getElementById(id);
  const safe=s=>String(s||"").replace(/[^a-zA-Z0-9._-]/g,"_").slice(-75)||"attachment";
  const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+ // TUS handles 6–50 MB uploads reliably and reports progress.
+ async function uploadAttachment(file,path,onProgress){
+   if(file.size<=6*1024*1024){
+     const {error}=await supabase.storage.from(BUCKET).upload(path,file,{upsert:false,contentType:file.type||"application/octet-stream"});
+     if(error)throw error;
+     onProgress(100);return;
+   }
+   const {data:{session},error:sessionError}=await supabase.auth.getSession();
+   if(sessionError||!session?.access_token)throw new Error("Session expired. Please sign in again.");
+   const {Upload}=await import("https://esm.sh/tus-js-client@4.3.1");
+   const host=new URL(window.PEH_CONFIG.supabaseUrl).hostname;
+   const storageHost=host.replace(".supabase.co",".storage.supabase.co");
+   await new Promise((resolve,reject)=>{
+     const uploader=new Upload(file,{
+       endpoint:"https://"+storageHost+"/storage/v1/upload/resumable",
+       retryDelays:[0,3000,5000,10000,20000],
+       uploadDataDuringCreation:true,
+       removeFingerprintOnSuccess:true,
+       chunkSize:6*1024*1024,
+       headers:{authorization:"Bearer "+session.access_token,apikey:window.PEH_CONFIG.supabaseAnonKey,"x-upsert":"false"},
+       metadata:{bucketName:BUCKET,objectName:path,contentType:file.type||"application/octet-stream",cacheControl:"3600"},
+       onError:reject,
+       onProgress:(uploaded,total)=>onProgress(Math.min(100,Math.round(uploaded/total*100))),
+       onSuccess:resolve
+     });
+     uploader.start();
+   });
+ }
  let busy=false;
  function alertError(message){
    displaySubmissionFeedback(false,"Your request could not be completed",message,"");
@@ -22,7 +50,7 @@
    e.stopImmediatePropagation();
    if(busy)return;
    const file=$("attachment").files[0];
-   if(file && file.size>maxBytes)return alertError("Choose a file smaller than 5 MB.");
+   if(file && file.size>maxBytes)return alertError("Choose a file no larger than 50 MB.");
    if(file && (!file.size||!allowed.has(file.name.split(".").pop().toLowerCase())))return alertError("Choose a nonempty PDF, Word, Excel, PowerPoint, CSV, text, PNG or JPG file.");
    if(!supabase)return alertError("The order service is unavailable. Nothing has been saved.");
    const deadline=new Date($("deadline").value);
@@ -44,8 +72,12 @@
      if(file){
        submit.textContent="Uploading attachment…";
        const path=user.id+"/"+data.id+"/"+crypto.randomUUID()+"-"+safe(file.name);
-       const {error:uploadErr}=await supabase.storage.from(BUCKET).upload(path,file,{upsert:false,contentType:file.type||"application/octet-stream"});
-       note+=uploadErr?" However, the attachment FAILED to upload: "+uploadErr.message+". Do not resubmit the entire request; contact support with the reference number.":" Your attachment was also uploaded securely.";
+       try{
+         await uploadAttachment(file,path,percent=>{submit.textContent="Uploading attachment: "+percent+"%";});
+         note+=" Your attachment was also uploaded securely.";
+       }catch(uploadErr){
+         note+=" However, the attachment FAILED to upload: "+(uploadErr?.message||String(uploadErr))+". Do not resubmit the entire request; contact support with the reference number.";
+       }
      }
      displaySubmissionFeedback(true,"Congratulations! Your task has been received.",note+" Our team will review your requirements and prepare your quotation. You can follow your order under My Account.",createdOrder);
      showNotice("requestStatus","Order saved. "+(file?"Check the attachment status in the confirmation above.":""),"success");
