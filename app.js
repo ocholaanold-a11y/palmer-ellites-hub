@@ -252,7 +252,7 @@ function renderWriterAdmin(){
 function editWriter(id){
  const w=adminWriters.find(x=>x.id===id);if(!w)return;
  const fields=[["writerName","display_name"],["writerSpecialty","specialty"],["writerBio","biography"],["writerSkills","skills"],["writerQualifications","qualifications"],["writerAchievements","achievements"],["writerPortfolio","portfolio_links"]];
- for(const [el,key] of fields)$(el).value=Array.isArray(w[key])?w[key].join("\\n"):(w[key]||"");
+ for(const [el,key] of fields)$(el).value=Array.isArray(w[key])?w[key].join("\n"):(w[key]||"");
  $("editingWriterId").value=w.id;$("writerPublish").checked=!!w.published;
  $("writerEditorForm").scrollIntoView({behavior:"smooth",block:"center"});
 }
