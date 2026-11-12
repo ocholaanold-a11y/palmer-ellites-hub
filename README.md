@@ -9,13 +9,13 @@ A responsive, emerald-green international learning-support website. This is a **
 - Quote request form includes an editable preferred currency selector, but accepts **no money**. Currency selection is not a price conversion or live payment authorization.
 - Site owner can edit default currency and visible currency options in `config.js` (`defaultCurrency` and `currencyOptions`). The quote form stores the requested ISO currency code if the Supabase backend is correctly configured. Actual settlement currencies will depend on the payment provider.
 - Student login, registration and basic project listing, **when a secure Supabase project and SQL policies are configured**.
-- Mobile responsive design and accessible navigation.
+- Mobile responsive design, accessible navigation, and custom emerald-green PEH logo assets (`assets/peh-logo.svg` full wordmark and `assets/peh-icon.svg` header emblem/favicon).
 
 ## Deploy for free on Cloudflare Pages
 
 1. Log in to [Cloudflare](https://dash.cloudflare.com/) and open **Workers & Pages**.
 2. Create a Pages project by connecting the GitHub repository **ocholaanold-a11y/palmer-ellites-hub**.
-3. Choose a static site deployment, **Framework preset: None**; **Build command: (leave blank)**; **Output directory: /** (repository root). If your Cloudflare dashboard does not support repository-root output, use a build command `mkdir -p dist && cp index.html styles.css app.js config.js _headers dist/` and output directory `dist`.
+3. Choose **Framework preset: None** and enter **Build command: `mkdir -p dist && cp index.html styles.css app.js config.js _headers dist/ && cp -r assets dist/`** and **Build output directory: `dist`**. The build copies the published HTML, CSS, JavaScript, configuration, security headers, and PEH logo assets. No Node dependencies are required.
 4. Deploy and verify HTTPS, menu, service cards, writer profiles and quote form. The form will correctly warn that backend setup is not complete.
 5. Optionally attach a custom domain later (domain purchase is not free).
 
