@@ -52,12 +52,14 @@ The public **Our Writers** section now loads only **published profiles** from Su
 
 ## Phase 4: Private student order attachments (test release)
 
-Supabase Storage bucket **`peh-order-files`** has a documented private access migration in **`supabase-storage-migration.sql`**. The website now loads **`assets/peh-files.js`**, which supports a single optional file (up to 5 MB) on a new order, and an authenticated private file browser for students and PEH administrators. It first saves the order record, then attempts a private upload to `user_uuid/order_uuid/random-safe-filename`. If the upload fails, the order still exists and the site explains that the attachment failed; students should NOT resubmit the entire request.
+For 50 MB uploads, make sure both the project-wide storage upload limit and bucket file size limit are set to **50 MB** under Supabase Storage Settings / bucket Settings. Re-run `supabase-storage-migration.sql` using the `postgres` SQL role to update the existing bucket. The website uses resumable TUS for files over 6 MB, with on-page progress feedback. Supabase Free maximum per-file size is 50 MB. Test with harmless sample files before collecting customer documents.
+
+Supabase Storage bucket **`peh-order-files`** has a documented private access migration in **`supabase-storage-migration.sql`**. The website now loads **`assets/peh-files.js`**, which supports a single optional file (up to 50 MB) on a new order, and an authenticated private file browser for students and PEH administrators. It first saves the order record, then attempts a private upload to `user_uuid/order_uuid/random-safe-filename`. If the upload fails, the order still exists and the site explains that the attachment failed; students should NOT resubmit the entire request.
 
 **Setup and test**
-1. Make sure the bucket exists, is **Private** and has the three policies from `supabase-storage-migration.sql`. The Supabase Storage page should display **3** policies and 5 MB maximum.
+1. Make sure the bucket exists, is **Private** and has the three policies from `supabase-storage-migration.sql`. The Supabase Storage page should display **3** policies and 50 MB maximum.
 2. Wait for Cloudflare to deploy the updated main branch. The existing Pages build command copies the entire `assets` directory automatically.
-3. Use a harmless fake document under 5 MB; sign in as a normal adult test student and submit one new quote request with the attachment. Verify that the order reference appears and says the file uploaded successfully.
+3. Use a harmless fake document under 50 MB; sign in as a normal adult test student and submit one new quote request with the attachment. Verify that the order reference appears and says the file uploaded successfully.
 4. Visit **My Account → My Private Files** and press **Refresh my files**. Download the test document and verify its content.
 5. Sign into PEH as the administrator; visit **Administrator workspace → Private Customer Documents** and use **Refresh order files**.
 6. Use another student account and verify that the first user's order and files cannot be accessed. Do not set the bucket to Public.
