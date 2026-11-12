@@ -32,3 +32,12 @@
 .submission-reference{font-size:12px!important;overflow-wrap:anywhere;font-weight:700}
 .submission-feedback .button-row{margin-top:15px}
 .request-form button:disabled{cursor:wait;opacity:.7}
+
+/* Authorized specialist profile editor */
+.writer-admin-panel{margin-top:24px}
+.writer-admin-panel h3{margin-bottom:10px}
+.writer-admin-panel form{margin:20px 0}
+.writer-admin-panel .button-row{margin-bottom:14px}
+.writer-admin-panel .admin-order{padding:15px 20px}
+.writer-empty{grid-column:1/-1}
+.writer-admin-panel textarea{min-height:95px}
