@@ -1,17 +1,18 @@
 
 const SERVICES=[
-["📊","SPSS Analysis","Data cleaning, hypothesis testing, regression, ANOVA and clear interpretation of statistical results.",["Statistics","Research methods"]],
-["📑","Report Checking","Detailed checks for structure, clarity, citations, formatting, grammar and constructive feedback.",["Review","Editing"]],
-["📈","Excel Related Analysis","Spreadsheet formulas, descriptive analysis, dashboards, pivot tables and data visualization.",["Data","Dashboards"]],
-["🌐","Website Analysis","Website usability, accessibility, SEO basics, performance and actionable audit reports.",["UX","Technical review"]],
-["🖥️","PowerPoint","Slide design, visual storytelling, data charts and presentation improvement.",["Slides","Presentations"]],
-["🎨","Canva Designs","Custom posters, slide templates, infographics, social media designs and visual learning aids.",["Creative","Design"]],
-["✍️","Proofreading & Editing","Grammar, style, structure and readability feedback while preserving your own voice.",["Language","Quality"]],
-["📚","Tutoring & Study Support","One-on-one guidance, explanations, study plans and skills development.",["Learning","Coaching"]],
-["🔍","Research Guidance","Research methods support, literature searching strategies and project planning.",["Research","Methods"]],
-["🧾","Referencing & Formatting","APA, MLA, Chicago, Harvard and document formatting guidance.",["Citations","Formatting"]],
-["📣","Business & Content Writing","Professional communications, promotional content, proposals and business documents.",["Business","Content"]],
-["📌","Data Visualization","Present numerical findings through accessible charts, dashboards and infographics.",["Charts","Visuals"]]
+["✍️","Essay Writing","Essay planning, outlining, argument development, model examples and feedback to help students write their own original essays.",["Planning","Writing guidance"]],
+["🎓","Research, Thesis & Dissertations","Research proposals, topic refinement, methodology coaching, literature search strategy, thesis/dissertation editing and chapter feedback.",["Research","Thesis support"]],
+["💼","Business & Content Writing","Business reports, professional proposals, marketing copy, website content and articles for permitted professional use.",["Business","Content"]],
+["📈","Excel Related Analysis","Excel formulas, pivot tables, data cleaning, dashboards, spreadsheet automation and analysis explanations.",["Spreadsheets","Analytics"]],
+["🎨","PowerPoint & Canva Designs","Slide design, presentation redesign, infographics, posters, Canva templates and visual storytelling.",["Slides","Design"]],
+["🌐","Website Analysis","Website usability reviews, accessibility audits, SEO basics, performance assessment and actionable recommendations.",["UX","Website audits"]],
+["📊","Data Visualization","Graphs, charts, interactive dashboards, reports and clear explanation of data insights.",["Charts","Dashboards"]],
+["📉","SPSS Analysis","Descriptive statistics, regression, hypothesis tests, ANOVA, SPSS output guidance and findings interpretation.",["Statistics","SPSS"]],
+["📝","Proofreading & Editing","Grammar, clarity, style, structure and readability feedback while preserving the author's ideas and voice.",["Proofreading","Editing"]],
+["📚","Tutoring & Study Support","Subject tutoring, concept explanations, study plans and constructive learning support.",["Learning","Coaching"]],
+["📑","Report Checking","Checks for report organization, coherence, evidence use, formatting, citations and actionable revision suggestions.",["Review","Quality"]],
+["🧾","Referencing & Formatting","APA, MLA, Harvard, Chicago and IEEE referencing guidance, citations and document formatting.",["Citations","Formatting"]],
+["🔄","Revisions","Follow-up revisions to eligible design, editing and professional writing deliverables, plus improvement feedback and refinement.",["Updates","Feedback"]]
 ];
 /* TEMPLATE DATA ONLY: never publish as genuine team member credentials. Edit with authorized facts. */
 const WRITERS=[
@@ -26,6 +27,12 @@ $("menuToggle").addEventListener("click",()=>{$("nav").classList.toggle("open")}
 document.querySelectorAll(".nav-links a").forEach(x=>x.addEventListener("click",()=>$("nav").classList.remove("open")));
 $("servicesGrid").innerHTML=SERVICES.map(s=>'<article class="service-card"><div class="service-icon">'+s[0]+'</div><h3>'+s[1]+'</h3><p>'+s[2]+'</p><a class="text-link service-select" href="#request" data-service="'+escapeHtml(s[1])+'">Request this service ↗</a></article>').join("");
 $("serviceInput").innerHTML='<option value="">Select a service</option>'+SERVICES.map(s=>'<option value="'+escapeHtml(s[1])+'">'+s[1]+'</option>').join("");
+const currencyCodes = Array.isArray(window.PEH_CONFIG?.currencyOptions) ? window.PEH_CONFIG.currencyOptions : ["USD","KES","EUR","GBP","CAD","AUD","INR","MYR","PHP","SGD","AED"];
+const allowedCurrencies = [...new Set(currencyCodes.filter(c=>/^[A-Z]{3}$/.test(c)))];
+$("currencyInput").innerHTML=allowedCurrencies.map(code=>'<option value="'+escapeHtml(code)+'">'+escapeHtml(code)+'</option>').join("");
+$("currencyInput").value=allowedCurrencies.includes(window.PEH_CONFIG?.defaultCurrency)?window.PEH_CONFIG.defaultCurrency:(allowedCurrencies[0]||"USD");
+$("currencyInput").addEventListener("change",()=>{ $("selectedCurrency").textContent=$("currencyInput").value; });
+$("selectedCurrency").textContent=$("currencyInput").value;
 document.querySelectorAll(".service-select").forEach(x=>x.addEventListener("click",()=>$("serviceInput").value=x.dataset.service));
 $("writersGrid").innerHTML=WRITERS.map(w=>'<article class="writer-card"><div class="avatar" aria-hidden="true">'+escapeHtml(w.initials)+'</div><div class="role">'+escapeHtml(w.role)+'</div><h3>'+escapeHtml(w.name)+'</h3><p class="bio">'+escapeHtml(w.bio)+'</p><div class="tags">'+w.skills.map(t=>'<span class="tag">'+escapeHtml(t)+'</span>').join("")+'</div><div class="writer-footer"><span class="demo-tag">Sample — unverified</span><button type="button" class="button secondary view-profile" data-id="'+escapeHtml(w.id)+'">View Profile →</button></div></article>').join("");
 $("writerInput").innerHTML='<option value="">No preference</option>'+WRITERS.map(w=>'<option value="'+escapeHtml(w.name)+'">'+escapeHtml(w.name)+' (sample)</option>').join("");
@@ -92,7 +99,7 @@ $("requestForm").addEventListener("submit",async e=>{
  const {data:{user}}=await supabase.auth.getUser();
  if(!user)return showNotice("requestStatus","Sign in to your student account first. Your request has not been submitted.","error");
  if(f)return showNotice("requestStatus","Secure file upload is not configured in this preview. Please remove the attachment before submitting, or ask the administrator to enable private storage.","error");
- const payload={user_id:user.id,service:$("serviceInput").value,description:$("description").value,deadline:new Date($("deadline").value).toISOString(),contact_email:$("requestEmail").value,preferred_writer:$("writerInput").value||null,status:"submitted"};
+ const payload={user_id:user.id,service:$("serviceInput").value,description:$("description").value,deadline:new Date($("deadline").value).toISOString(),contact_email:$("requestEmail").value,preferred_writer:$("writerInput").value||null,requested_currency:$("currencyInput").value,status:"submitted"};
  const {error}=await supabase.from("orders").insert(payload);
  if(error)return showNotice("requestStatus","Submission was unsuccessful: "+error.message,"error");
  showNotice("requestStatus","Your request was received. Check your dashboard for updates.","success");$("requestForm").reset();loadOrders();
