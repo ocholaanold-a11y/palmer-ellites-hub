@@ -100,18 +100,65 @@ async function loadOrders(){
  if(error){$("ordersPanel").innerHTML='<p>Orders will appear when the secure PEH database and access policies are configured.</p>';return;}
  $("ordersPanel").innerHTML=data?.length?data.map(o=>'<div class="screen-line"><div><b>'+escapeHtml(o.service)+'</b><small>'+escapeHtml(new Date(o.created_at).toLocaleDateString())+' · '+escapeHtml(o.status)+(o.quote_amount!=null?' · Quote: '+escapeHtml(o.requested_currency)+' '+escapeHtml(Number(o.quote_amount).toFixed(2)):'')+'</small></div></div>').join(""):'<div class="empty-state"><div class="empty-icon">📦</div><b>No projects yet</b><p>Your project updates will appear here.</p></div>';
 }
+const formFeedback = $("submissionFeedback");
+function displaySubmissionFeedback(ok, title, message, reference) {
+  formFeedback.classList.remove("hidden","is-success","is-error");
+  formFeedback.classList.add(ok?"is-success":"is-error");
+  $("submissionTitle").textContent=title;
+  $("submissionMessage").textContent=message;
+  $("submissionFeedback").querySelector(".submission-feedback-icon").textContent=ok?"✓":"!";
+  const ref=$("submissionReference");
+  ref.classList.toggle("hidden",!reference);
+  ref.textContent=reference?"Request reference: "+reference:"";
+  formFeedback.scrollIntoView({behavior:"smooth",block:"center"});
+  formFeedback.focus({preventScroll:true});
+}
+function submissionError(message){
+  displaySubmissionFeedback(false,"Your request was not submitted",message,"");
+  showNotice("requestStatus","Submission unsuccessful. Please review the message below.","error");
+}
+$("newRequest").addEventListener("click",()=>{
+  formFeedback.classList.add("hidden");
+  $("requestForm").reset();
+  $("selectedCurrency").textContent=$("currencyInput").value;
+  $("serviceInput").focus();
+});
+let submittingRequest=false;
 $("requestForm").addEventListener("submit",async e=>{
- e.preventDefault();
- const f=$("attachment").files[0];
- if(f&&f.size>5*1024*1024)return showNotice("requestStatus","Your file exceeds 5 MB. Please choose a smaller file.","error");
- if(!supabase)return showNotice("requestStatus","The order backend has not been connected yet. This form has NOT sent your request or uploaded any files. Please do not submit sensitive information here.","error");
- const {data:{user}}=await supabase.auth.getUser();
- if(!user)return showNotice("requestStatus","Sign in to your student account first. Your request has not been submitted.","error");
- if(f)return showNotice("requestStatus","Secure file upload is not configured in this preview. Please remove the attachment before submitting, or ask the administrator to enable private storage.","error");
- const payload={user_id:user.id,service:$("serviceInput").value,description:$("description").value,deadline:new Date($("deadline").value).toISOString(),contact_email:$("requestEmail").value,preferred_writer:$("writerInput").value||null,requested_currency:$("currencyInput").value,status:"submitted"};
- const {error}=await supabase.from("orders").insert(payload);
- if(error)return showNotice("requestStatus","Submission was unsuccessful: "+error.message,"error");
- showNotice("requestStatus","Your request was received. Check your dashboard for updates.","success");$("requestForm").reset();loadOrders();
+  e.preventDefault();
+  if(submittingRequest)return;
+  formFeedback.classList.add("hidden");
+  const attachment=$("attachment").files[0];
+  if(attachment&&attachment.size>5*1024*1024)return submissionError("The selected file is larger than 5 MB. Choose a smaller file.");
+  if(!supabase)return submissionError("The secure order service is not available. Please contact PEH support. No request has been saved.");
+  if(attachment)return submissionError("File uploads are not enabled yet. Remove the attachment and submit the text instructions only. No request was saved.");
+  const date=new Date($("deadline").value);
+  if(!Number.isFinite(date.getTime())||date.getTime()<=Date.now())return submissionError("Choose a valid future deadline.");
+  submittingRequest=true;
+  const submitButton=$("requestForm").querySelector('button[type="submit"]');
+  submitButton.disabled=true;
+  submitButton.textContent="Submitting request…";
+  showNotice("requestStatus","Securely submitting your request…","");
+  try{
+    const {data:{user},error:authError}=await supabase.auth.getUser();
+    if(authError||!user)return submissionError("Please sign in to your student account before submitting. Your request has not been saved.");
+    const payload={user_id:user.id,service:$("serviceInput").value,description:$("description").value,deadline:date.toISOString(),contact_email:$("requestEmail").value,preferred_writer:$("writerInput").value||null,requested_currency:$("currencyInput").value,status:"submitted"};
+    const {data,error}=await supabase.from("orders").insert(payload).select("id").single();
+    if(error)return submissionError("Supabase could not save your request: "+error.message);
+    if(!data?.id)return submissionError("Your submission could not be confirmed. Please check My Orders before trying again.");
+    displaySubmissionFeedback(true,"Congratulations! Your task has been received.","Thank you for choosing Palmer Ellites Hub (PEH). Your request has been submitted successfully. Our team will review your requirements and prepare a quotation. You can track the request in My Account.",data.id);
+    showNotice("requestStatus","Request received successfully.","success");
+    $("requestForm").reset();
+    $("selectedCurrency").textContent=$("currencyInput").value;
+    loadOrders();
+    if(currentAdmin)loadAdmin();
+  }catch(err){
+    submissionError("We could not confirm your request because of a connection error. Please check My Orders before trying again.");
+  }finally{
+    submittingRequest=false;
+    submitButton.disabled=false;
+    submitButton.textContent="Submit quote request →";
+  }
 });
 
 const ADMIN_STATUSES=["submitted","quoted","awaiting_payment","assigned","in_progress","review","delivered","cancelled"];
