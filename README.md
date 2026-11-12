@@ -66,6 +66,20 @@ Supabase Storage bucket **`peh-order-files`** has a documented private access mi
 
 **Limitations / before real student data:** Client-side extension checking is not sufficient protection against malicious uploads or deceptive MIME metadata. Production use requires server-side file signature checking, malware scanning/quarantine, data minimization, retention and deletion policies, and legal safeguards for under-18 users. The current feature is suitable for controlled testing, not unrestricted sensitive customer intake. No writer-role file permissions are granted yet. Secure delivery uploads, revision files, notifications and payments remain unfinished.
 
+## Phase 5: administrator document delivery and client revisions (requires SQL activation)
+
+PEH now includes `assets/peh-phase5.js` (loaded on the website). It adds:
+
+- **PEH admin:** a protected delivery-management panel. An authorized admin can select an existing order, privately upload a completed file up to 50 MB and then mark the order **delivered**. Students can download it using their existing **My Private Files** panel. Successful file upload is confirmed before the status update is attempted.
+- **Student:** a **Revisions & Feedback** panel that lists their own orders and existing revision requests. For orders with status **review** or **delivered**, a signed-in student can submit detailed revision instructions.
+- **PEH admin:** view incoming revision requests, change status (requested / in review / accepted / completed / declined) and send a brief admin response. No payment status is automatically marked paid.
+
+**Activate Phase 5:** In Supabase SQL Editor, select the `postgres` role and run the [`supabase-revisions-migration.sql`](./supabase-revisions-migration.sql) script. It creates a private RLS-protected `peh_revisions` table; student order ownership is enforced in the database. The existing private `peh-order-files` bucket and 50 MB limit remain unchanged.
+
+**Test before use:** Sign in as admin, open **Administrator Workspace → Open delivery management**, upload a harmless test file to an existing test order, and verify it appears in the test student's **My Private Files**. Marked-delivered orders permit the customer to open **Revisions & Feedback** and submit a revision request. Confirm the administrator can read the request and the other student accounts cannot. No real customer documents should be used until server-side malware scanning, retention/deletion, and minor-account protections have been reviewed.
+
+**Limitations:** This release does not provide a separate writer-login portal, file virus scanning, secure messaging, automatic notifications or live payment processing. Admin delivery of a file and an order status change are separate operations; if the status change fails, the file may still have uploaded and should be checked before retrying. Revision functionality requires the SQL migration; without it, the portal shows a setup error rather than saving a request.
+
 ## Deploy for free on Cloudflare Pages
 
 1. Log in to [Cloudflare](https://dash.cloudflare.com/) and open **Workers & Pages**.
