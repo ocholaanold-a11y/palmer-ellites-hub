@@ -60,6 +60,14 @@ async function initSupabase(){
  }catch(err){showNotice("authStatus","Secure account service is currently unavailable.","error")}
 }
 function showNotice(id,msg,type){const el=$(id);el.textContent=msg;el.className="form-status "+(type==="error"?"feedback-error":type==="success"?"feedback-success":"")}
+let currentAdmin = false;
+async function checkAdmin(user){
+ if(!supabase || !user){ currentAdmin=false; $("admin").classList.add("hidden"); return; }
+ const {data,error} = await supabase.from("peh_admins").select("user_id").eq("user_id",user.id).maybeSingle();
+ currentAdmin = !error && Boolean(data);
+ $("admin").classList.toggle("hidden",!currentAdmin);
+ if(currentAdmin) await loadAdmin();
+}
 function showAuth(user){
  if(!supabase)return;
  $("authState").textContent=user?"Signed in as "+user.email:"Sign in to view your requests and order progress.";
@@ -68,6 +76,7 @@ function showAuth(user){
  $("authPassword").required=!user;$("authEmail").required=!user;
  $("authForm").classList.toggle("hidden",!!user);
  if(user)loadOrders();else $("ordersPanel").innerHTML='<p>Sign in to see your projects.</p>';
+ checkAdmin(user);
 }
 async function authAction(type){
  if(!supabase)return showNotice("authStatus","Accounts are not yet enabled. PEH must connect a secure database before registration opens.","error");
@@ -87,9 +96,9 @@ $("signOut").addEventListener("click",async()=>{if(supabase)await supabase.auth.
 async function loadOrders(){
  if(!supabase)return;
  const {data:{user}}=await supabase.auth.getUser();if(!user)return;
- const {data,error}=await supabase.from("orders").select("id,service,description,deadline,status,created_at").eq("user_id",user.id).order("created_at",{ascending:false}).limit(30);
+ const {data,error}=await supabase.from("orders").select("id,service,description,deadline,status,created_at,requested_currency,quote_amount").eq("user_id",user.id).order("created_at",{ascending:false}).limit(30);
  if(error){$("ordersPanel").innerHTML='<p>Orders will appear when the secure PEH database and access policies are configured.</p>';return;}
- $("ordersPanel").innerHTML=data?.length?data.map(o=>'<div class="screen-line"><div><b>'+escapeHtml(o.service)+'</b><small>'+escapeHtml(new Date(o.created_at).toLocaleDateString())+' · '+escapeHtml(o.status)+'</small></div></div>').join(""):'<div class="empty-state"><div class="empty-icon">📦</div><b>No projects yet</b><p>Your project updates will appear here.</p></div>';
+ $("ordersPanel").innerHTML=data?.length?data.map(o=>'<div class="screen-line"><div><b>'+escapeHtml(o.service)+'</b><small>'+escapeHtml(new Date(o.created_at).toLocaleDateString())+' · '+escapeHtml(o.status)+(o.quote_amount!=null?' · Quote: '+escapeHtml(o.requested_currency)+' '+escapeHtml(Number(o.quote_amount).toFixed(2)):'')+'</small></div></div>').join(""):'<div class="empty-state"><div class="empty-icon">📦</div><b>No projects yet</b><p>Your project updates will appear here.</p></div>';
 }
 $("requestForm").addEventListener("submit",async e=>{
  e.preventDefault();
@@ -104,4 +113,49 @@ $("requestForm").addEventListener("submit",async e=>{
  if(error)return showNotice("requestStatus","Submission was unsuccessful: "+error.message,"error");
  showNotice("requestStatus","Your request was received. Check your dashboard for updates.","success");$("requestForm").reset();loadOrders();
 });
+
+const ADMIN_STATUSES=["submitted","quoted","awaiting_payment","assigned","in_progress","review","delivered","cancelled"];
+let adminRecords=[];
+function adminOrderMarkup(o){
+  const statusOpts=ADMIN_STATUSES.map(st=>'<option value="'+st+'"'+(o.status===st?' selected':'')+'>'+st.replaceAll("_"," ")+'</option>').join("");
+  return '<article class="admin-order"><div class="admin-order-heading"><div><strong>'+escapeHtml(o.service)+'</strong><span class="tag">'+escapeHtml(o.status.replaceAll("_"," "))+'</span></div><small>'+escapeHtml(new Date(o.created_at).toLocaleString())+'</small></div><p>'+escapeHtml(o.description)+'</p><p class="muted">Customer: '+escapeHtml(o.contact_email)+' · Deadline: '+escapeHtml(new Date(o.deadline).toLocaleString())+' · Currency: '+escapeHtml(o.requested_currency||"USD")+'</p><div class="admin-controls"><label>Quoted amount<input type="number" min="0" step="0.01" class="admin-quote" data-order="'+escapeHtml(o.id)+'" value="'+(o.quote_amount==null?"":escapeHtml(o.quote_amount))+'" placeholder="Enter amount"></label><label>Order status<select class="admin-status-select" data-order="'+escapeHtml(o.id)+'">'+statusOpts+'</select></label><button type="button" class="button primary admin-save" data-order="'+escapeHtml(o.id)+'">Save changes</button></div></article>';
+}
+async function loadAdmin(){
+ if(!supabase || !currentAdmin)return;
+ const {data,error}=await supabase.from("orders").select("id,user_id,service,description,deadline,contact_email,preferred_writer,requested_currency,status,quote_amount,created_at").order("created_at",{ascending:false}).limit(100);
+ if(error){showNotice("adminStatus","Unable to load admin orders: "+error.message,"error");return;}
+ adminRecords=data||[];
+ $("adminTotal").textContent=adminRecords.length;
+ $("adminNew").textContent=adminRecords.filter(o=>o.status==="submitted").length;
+ $("adminQuoted").textContent=adminRecords.filter(o=>o.status==="quoted").length;
+ $("adminProgress").textContent=adminRecords.filter(o=>o.status==="in_progress").length;
+ renderAdminOrders();
+ showNotice("adminStatus",adminRecords.length+" order(s) loaded (maximum 100 most recent).","success");
+}
+function renderAdminOrders(){
+ const filter=$("adminFilter").value;
+ const rows=adminRecords.filter(o=>filter==="all"||o.status===filter);
+ $("adminOrders").innerHTML=rows.length?rows.map(adminOrderMarkup).join(""):'<p class="muted">No requests match this filter.</p>';
+ $("adminOrders").querySelectorAll(".admin-save").forEach(btn=>btn.addEventListener("click",()=>saveAdminOrder(btn.dataset.order)));
+}
+async function saveAdminOrder(id){
+ if(!currentAdmin || !supabase)return;
+ const o=adminRecords.find(x=>x.id===id);if(!o)return;
+ const quoteEl=Array.from(document.querySelectorAll(".admin-quote")).find(x=>x.dataset.order===id);
+ const statusEl=Array.from(document.querySelectorAll(".admin-status-select")).find(x=>x.dataset.order===id);
+ if(!quoteEl || !statusEl)return;
+ const amount=quoteEl.value.trim()===""?null:Number(quoteEl.value);
+ if(amount!==null && (!Number.isFinite(amount)||amount<0||amount>9999999999.99))return showNotice("adminStatus","Please enter a valid non-negative quote amount.","error");
+ const status=statusEl.value;
+ if(!ADMIN_STATUSES.includes(status))return;
+ if(status==="quoted" && amount===null)return showNotice("adminStatus","Add a quote amount before marking a request quoted.","error");
+ if(o.status==="paid" && status!==o.status)return showNotice("adminStatus","Paid orders require a secure server-side transition workflow. This dashboard cannot alter their status.","error");
+ const {error}=await supabase.from("orders").update({quote_amount:amount,status}).eq("id",id);
+ if(error)return showNotice("adminStatus","Update failed: "+error.message,"error");
+ showNotice("adminStatus","Quote and status saved.","success");
+ await loadAdmin();
+}
+$("adminFilter").addEventListener("change",renderAdminOrders);
+$("refreshAdmin").addEventListener("click",loadAdmin);
+
 initSupabase();
