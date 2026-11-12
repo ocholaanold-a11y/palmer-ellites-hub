@@ -11,6 +11,30 @@ A responsive, emerald-green international learning-support website. This is a **
 - Student login, registration and basic project listing, **when a secure Supabase project and SQL policies are configured**.
 - Mobile responsive design, accessible navigation, and custom emerald-green PEH logo assets (`assets/peh-logo.svg` full wordmark and `assets/peh-icon.svg` header emblem/favicon).
 
+## Phase 2: student orders and authorized admin workspace
+
+**Implemented in the repository (requires configuration before usable):**
+
+- Student signup/signin UI connected through the Supabase publishable client key.
+- Student order listing with status, selected currency and quoted amount.
+- An admin-only order workspace that lists the latest 100 requests, filters by status, permits non-negative quote entry and updates permitted non-paid project statuses.
+- Revised database setup with row-level policies restricting students to their own records and administrators to verified memberships.
+- A dedicated logout button when authenticated.
+
+**Activation steps (business owner):**
+
+1. Create a Supabase project at https://supabase.com/dashboard. Do not post passwords or secret keys into chat.
+2. In Supabase **SQL Editor**, run `supabase-schema.sql` from this repository. The script is intended for an initial setup; review it before applying to a production database.
+3. In Supabase **Authentication → Providers**, enable Email and email confirmation. Under URL configuration set the site URL to your actual Cloudflare Pages domain and add its login redirect URL.
+4. In Supabase project settings, copy the **Project URL** and **publishable/anon key** (never the service role/secret key). Update the two public settings in `config.js`, commit to GitHub and let Cloudflare redeploy.
+5. On the deployed website, create an account for the PEH administrator, verify email, and find the user ID in **Supabase Authentication → Users**.
+6. In Supabase SQL Editor only, authorize that specific user by running:
+   `insert into public.peh_admins (user_id) values ('YOUR_VERIFIED_ADMIN_AUTH_USER_UUID');`
+7. Sign out and back in to verify the **Administrator workspace** appears only for that account. Test with a separate ordinary student account and confirm it cannot view or edit any other student's orders.
+8. Test an order with **no attachment**. Then as admin set a quote amount and status `quoted`; verify the student can see the quote.
+
+**Safety and operations:** Do not treat this version as production-ready for children. New accounts are restricted by an 18+ confirmation; robust age-appropriate guardian-consent compliance still needs to be developed. Do not accept real order files because private upload and malware scanning aren't implemented. Checkout, verified payments, private delivery and communications are still pending. Admin status updates must not be treated as payment confirmation.
+
 ## Deploy for free on Cloudflare Pages
 
 1. Log in to [Cloudflare](https://dash.cloudflare.com/) and open **Workers & Pages**.
@@ -30,7 +54,7 @@ A responsive, emerald-green international learning-support website. This is a **
 
 ## Payments and full production system
 
-Stripe / other payment providers, checkout, webhooks, invoices, writer/admin dashboards, private file delivery, chat and notifications are **not yet implemented**. An editable currency dropdown is now present, but it is for quote preference only, not payment processing. Never mark an order as paid solely from a browser response: payment confirmation must come from a server-side verified webhook. Choose a provider based on your business location and supported settlement countries. Never collect raw card details on the PEH site.
+Stripe / other payment providers, checkout, webhooks, invoices, writer assignment dashboard, private file delivery, chat and notifications are **not yet implemented**. An initial administrator order and quote dashboard has been added but is only functional after verified Supabase setup. An editable currency dropdown is now present, but it is for quote preference only, not payment processing. Never mark an order as paid solely from a browser response: payment confirmation must come from a server-side verified webhook. Choose a provider based on your business location and supported settlement countries. Never collect raw card details on the PEH site.
 
 ### Important implementation limits
 
