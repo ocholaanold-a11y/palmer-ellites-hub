@@ -130,7 +130,7 @@ $("requestForm").addEventListener("submit",async e=>{
   if(submittingRequest)return;
   formFeedback.classList.add("hidden");
   const attachment=$("attachment").files[0];
-  if(attachment&&attachment.size>5*1024*1024)return submissionError("The selected file is larger than 5 MB. Choose a smaller file.");
+  if(attachment&&attachment.size>50*1024*1024)return submissionError("The selected file is larger than 50 MB. Choose a smaller file.");
   if(!supabase)return submissionError("The secure order service is not available. Please contact PEH support. No request has been saved.");
   if(attachment)return submissionError("File uploads are not enabled yet. Remove the attachment and submit the text instructions only. No request was saved.");
   const date=new Date($("deadline").value);
