@@ -21,3 +21,14 @@
 .admin-controls label{margin:0}
 .admin-controls button{min-height:46px}
 @media(max-width:700px){.admin-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.admin-controls{grid-template-columns:1fr}}
+
+/* Prominent, accessible project submission confirmation */
+.submission-feedback{margin-top:24px;padding:26px;border:2px solid var(--green);border-radius:16px;background:#e9f9ef;color:var(--deep);box-shadow:0 14px 30px rgba(7,118,78,.09);outline-offset:3px}
+.submission-feedback.is-error{background:#fff1f1;border-color:#be4f4f;color:#772d2d}
+.submission-feedback-icon{display:grid;place-items:center;width:43px;height:43px;border-radius:50%;background:var(--green);color:#fff;font-size:26px;font-weight:800;margin-bottom:13px}
+.submission-feedback.is-error .submission-feedback-icon{background:#ba3838}
+.submission-feedback h3{font-size:24px;margin:0 0 10px;color:inherit}
+.submission-feedback p{color:inherit;font-size:14px}
+.submission-reference{font-size:12px!important;overflow-wrap:anywhere;font-weight:700}
+.submission-feedback .button-row{margin-top:15px}
+.request-form button:disabled{cursor:wait;opacity:.7}
