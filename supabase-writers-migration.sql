@@ -23,9 +23,12 @@ grant insert, update, delete on public.peh_writers to authenticated;
 drop policy if exists "public view published writers" on public.peh_writers;
 create policy "public view published writers" on public.peh_writers
  for select to anon,authenticated
- using (published = true or exists (
-   select 1 from public.peh_admins a where a.user_id = (select auth.uid())
- ));
+ using (published = true);
+drop policy if exists "admins view all writers" on public.peh_writers;
+create policy "admins view all writers" on public.peh_writers
+ for select to authenticated using (
+  exists(select 1 from public.peh_admins a where a.user_id=(select auth.uid()))
+ );
 drop policy if exists "admins insert writers" on public.peh_writers;
 create policy "admins insert writers" on public.peh_writers
  for insert to authenticated with check (
