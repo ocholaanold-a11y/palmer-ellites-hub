@@ -50,6 +50,20 @@ The public **Our Writers** section now loads only **published profiles** from Su
 
 **Not implemented yet:** Staff login and writer-only dashboard, private file delivery, encrypted client messaging, customer notifications, or live checkout. These require additional backend development and testing. Do not share student files via public portfolio links.
 
+## Phase 4: Private student order attachments (test release)
+
+Supabase Storage bucket **`peh-order-files`** has a documented private access migration in **`supabase-storage-migration.sql`**. The website now loads **`assets/peh-files.js`**, which supports a single optional file (up to 5 MB) on a new order, and an authenticated private file browser for students and PEH administrators. It first saves the order record, then attempts a private upload to `user_uuid/order_uuid/random-safe-filename`. If the upload fails, the order still exists and the site explains that the attachment failed; students should NOT resubmit the entire request.
+
+**Setup and test**
+1. Make sure the bucket exists, is **Private** and has the three policies from `supabase-storage-migration.sql`. The Supabase Storage page should display **3** policies and 5 MB maximum.
+2. Wait for Cloudflare to deploy the updated main branch. The existing Pages build command copies the entire `assets` directory automatically.
+3. Use a harmless fake document under 5 MB; sign in as a normal adult test student and submit one new quote request with the attachment. Verify that the order reference appears and says the file uploaded successfully.
+4. Visit **My Account → My Private Files** and press **Refresh my files**. Download the test document and verify its content.
+5. Sign into PEH as the administrator; visit **Administrator workspace → Private Customer Documents** and use **Refresh order files**.
+6. Use another student account and verify that the first user's order and files cannot be accessed. Do not set the bucket to Public.
+
+**Limitations / before real student data:** Client-side extension checking is not sufficient protection against malicious uploads or deceptive MIME metadata. Production use requires server-side file signature checking, malware scanning/quarantine, data minimization, retention and deletion policies, and legal safeguards for under-18 users. The current feature is suitable for controlled testing, not unrestricted sensitive customer intake. No writer-role file permissions are granted yet. Secure delivery uploads, revision files, notifications and payments remain unfinished.
+
 ## Deploy for free on Cloudflare Pages
 
 1. Log in to [Cloudflare](https://dash.cloudflare.com/) and open **Workers & Pages**.
