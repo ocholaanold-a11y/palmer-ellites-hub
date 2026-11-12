@@ -35,7 +35,10 @@ create index if not exists orders_user_created_idx on public.orders(user_id,crea
 create index if not exists orders_status_created_idx on public.orders(status,created_at desc);
 alter table public.orders enable row level security;
 revoke all on public.orders from anon;
-grant select, insert, update on public.orders to authenticated;
+grant select, insert on public.orders to authenticated;
+-- Limit browser-originated admin updates to quote/status only. Clients still
+-- cannot UPDATE because RLS does not grant them an update policy.
+grant update (status, quote_amount) on public.orders to authenticated;
 
 drop policy if exists "client can read own orders" on public.orders;
 create policy "client can read own orders" on public.orders
