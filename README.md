@@ -4,9 +4,10 @@ A responsive, emerald-green international learning-support website. This is a **
 
 ## Pages and features included
 
-- Home and searchable-looking service gallery with 12 service categories, including **SPSS Analysis, Report Checking, Excel Related Analysis, Website Analysis, PowerPoint and Canva Designs**.
+- Home and searchable-looking service gallery with 13 service categories in the requested order: **Essay Writing, Research, Thesis & Dissertations, Business & Content Writing, Excel Related Analysis, PowerPoint & Canva Designs, Website Analysis, Data Visualization, SPSS Analysis, Proofreading & Editing, Tutoring & Study Support, Report Checking, Referencing & Formatting, Revisions**.
 - **Meet Our Writers** with three clearly marked **sample profile templates**, including specialties, qualifications, achievements and portfolio sections. Replace these with **real, permissioned, verified** information before public launch. Never publish fabricated awards or testimonials.
-- Quote request form; accepts **no money**, and does **not** silently transmit submitted details.
+- Quote request form includes an editable preferred currency selector, but accepts **no money**. Currency selection is not a price conversion or live payment authorization.
+- Site owner can edit default currency and visible currency options in `config.js` (`defaultCurrency` and `currencyOptions`). The quote form stores the requested ISO currency code if the Supabase backend is correctly configured. Actual settlement currencies will depend on the payment provider.
 - Student login, registration and basic project listing, **when a secure Supabase project and SQL policies are configured**.
 - Mobile responsive design and accessible navigation.
 
@@ -20,7 +21,7 @@ A responsive, emerald-green international learning-support website. This is a **
 
 ## Enable accounts and requests with Supabase
 
-1. Create a Supabase project and run `supabase-schema.sql` using its SQL editor.
+1. Create a Supabase project and run `supabase-schema.sql` using its SQL editor. If you previously ran an older version of the schema, also run `alter table public.orders add column if not exists requested_currency text not null default 'USD';` to add the field.
 2. Copy the **project URL** and **publishable/anon** key into `config.js`. These are public configuration values. Do **NOT** put a service role key into a public file.
 3. In Supabase authentication settings enable email/password and configure allowed redirect URLs and email confirmation.
 4. Verify signup, email confirmation, login and per-user order access with separate test users.
@@ -29,7 +30,7 @@ A responsive, emerald-green international learning-support website. This is a **
 
 ## Payments and full production system
 
-Stripe / other payment providers, checkout, webhooks, invoices, writer/admin dashboards, private file delivery, chat and notifications are **not yet implemented**. Never mark an order as paid solely from a browser response: payment confirmation must come from a server-side verified webhook. Choose a provider based on your business location and supported settlement countries. Never collect raw card details on the PEH site.
+Stripe / other payment providers, checkout, webhooks, invoices, writer/admin dashboards, private file delivery, chat and notifications are **not yet implemented**. An editable currency dropdown is now present, but it is for quote preference only, not payment processing. Never mark an order as paid solely from a browser response: payment confirmation must come from a server-side verified webhook. Choose a provider based on your business location and supported settlement countries. Never collect raw card details on the PEH site.
 
 ### Important implementation limits
 
