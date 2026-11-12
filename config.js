@@ -3,8 +3,8 @@
 // Supabase Project URL and *publishable/anon* key ONLY.
 // Never put a Supabase service_role key, Stripe secret, or other secret here.
 window.PEH_CONFIG = {
-  supabaseUrl: "",
-  supabaseAnonKey: "",
+  supabaseUrl: "https://wrcwluwgvaghqdvruwhm.supabase.co/rest/v1/",
+  supabaseAnonKey: "sb_publishable_NnQnEsaDphCmcoU3G4Vt4A_xpZfcxTl",
   // Site owner may edit the default and available quote currencies here.
   // Currency selection is a preference only until checkout is integrated.
   defaultCurrency: "USD",
