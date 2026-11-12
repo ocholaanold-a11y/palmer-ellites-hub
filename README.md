@@ -35,6 +35,21 @@ A responsive, emerald-green international learning-support website. This is a **
 
 **Safety and operations:** Do not treat this version as production-ready for children. New accounts are restricted by an 18+ confirmation; robust age-appropriate guardian-consent compliance still needs to be developed. Do not accept real order files because private upload and malware scanning aren't implemented. Checkout, verified payments, private delivery and communications are still pending. Admin status updates must not be treated as payment confirmation.
 
+## Phase 3: Verified professional profiles and assignments
+
+The public **Our Writers** section now loads only **published profiles** from Supabase after setup. The admin workspace includes a specialist editor with display name, specialty, biography, skills, verified qualifications, achievements, HTTPS portfolio links, and a publication consent checkbox. Admin orders also have an **Assigned specialist** dropdown. The writer profiles are professional listings, NOT separate staff login accounts.
+
+**To activate this safely:**
+
+1. Open the [PEH Supabase SQL Editor](https://supabase.com/dashboard) and run the entire **`supabase-writers-migration.sql`** file from GitHub. This adds the protected `peh_writers` table and `assigned_writer_id` column on existing orders.
+2. Open the deployed [PEH website](https://palmer-ellites-hub.pages.dev/#dashboard), sign in with your previously authorized PEH admin login, then scroll to **Administrator workspace → Manage professional profiles**.
+3. Enter actual approved specialist names and credentials. Add only achievements you have verified, and get explicit permission for names, bios, qualifications, public portfolio links and images. Leave **Publish** unchecked until authorized.
+4. After publishing at least one real profile, refresh the website. The public **Our Writers** area will show the verified profiles instead of sample templates.
+5. Under any administrator order, select a specialist and click **Save changes**. The assignment stays on the order record; it does **not** give that person access to private customer information.
+6. Verify with a non-admin login that unpublished profiles and other users' orders are inaccessible.
+
+**Not implemented yet:** Staff login and writer-only dashboard, private file delivery, encrypted client messaging, customer notifications, or live checkout. These require additional backend development and testing. Do not share student files via public portfolio links.
+
 ## Deploy for free on Cloudflare Pages
 
 1. Log in to [Cloudflare](https://dash.cloudflare.com/) and open **Workers & Pages**.
