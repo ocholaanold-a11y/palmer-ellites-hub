@@ -166,13 +166,21 @@ const ADMIN_STATUSES=["submitted","quoted","awaiting_payment","assigned","in_pro
 let adminRecords=[];
 function adminOrderMarkup(o){
   const statusOpts=ADMIN_STATUSES.map(st=>'<option value="'+st+'"'+(o.status===st?' selected':'')+'>'+st.replaceAll("_"," ")+'</option>').join("");
-  return '<article class="admin-order"><div class="admin-order-heading"><div><strong>'+escapeHtml(o.service)+'</strong><span class="tag">'+escapeHtml(o.status.replaceAll("_"," "))+'</span></div><small>'+escapeHtml(new Date(o.created_at).toLocaleString())+'</small></div><p>'+escapeHtml(o.description)+'</p><p class="muted">Customer: '+escapeHtml(o.contact_email)+' · Deadline: '+escapeHtml(new Date(o.deadline).toLocaleString())+' · Currency: '+escapeHtml(o.requested_currency||"USD")+'</p><div class="admin-controls"><label>Quoted amount<input type="number" min="0" step="0.01" class="admin-quote" data-order="'+escapeHtml(o.id)+'" value="'+(o.quote_amount==null?"":escapeHtml(o.quote_amount))+'" placeholder="Enter amount"></label><label>Order status<select class="admin-status-select" data-order="'+escapeHtml(o.id)+'">'+statusOpts+'</select></label><button type="button" class="button primary admin-save" data-order="'+escapeHtml(o.id)+'">Save changes</button></div></article>';
+  const assignOptions='<option value="">Unassigned</option>'+adminWriters.map(w=>'<option value="'+escapeHtml(w.id)+'"'+(o.assigned_writer_id===w.id?' selected':'')+'>'+escapeHtml(w.display_name)+'</option>').join("");
+  return '<article class="admin-order"><div class="admin-order-heading"><div><strong>'+escapeHtml(o.service)+'</strong><span class="tag">'+escapeHtml(o.status.replaceAll("_"," "))+'</span></div><small>'+escapeHtml(new Date(o.created_at).toLocaleString())+'</small></div><p>'+escapeHtml(o.description)+'</p><p class="muted">Customer: '+escapeHtml(o.contact_email)+' · Deadline: '+escapeHtml(new Date(o.deadline).toLocaleString())+' · Currency: '+escapeHtml(o.requested_currency||"USD")+'</p><div class="admin-controls"><label>Quoted amount<input type="number" min="0" step="0.01" class="admin-quote" data-order="'+escapeHtml(o.id)+'" value="'+(o.quote_amount==null?"":escapeHtml(o.quote_amount))+'" placeholder="Enter amount"></label><label>Order status<select class="admin-status-select" data-order="'+escapeHtml(o.id)+'">'+statusOpts+'</select></label><label>Assigned specialist<select class="admin-assignee" data-order="'+escapeHtml(o.id)+'">'+assignOptions+'</select></label><button type="button" class="button primary admin-save" data-order="'+escapeHtml(o.id)+'">Save changes</button></div></article>';
 }
 async function loadAdmin(){
  if(!supabase || !currentAdmin)return;
  const {data,error}=await supabase.from("orders").select("id,user_id,service,description,deadline,contact_email,preferred_writer,requested_currency,status,quote_amount,created_at").order("created_at",{ascending:false}).limit(100);
  if(error){showNotice("adminStatus","Unable to load admin orders: "+error.message,"error");return;}
  adminRecords=data||[];
+ if(adminRecords.length){
+   const assignmentResults=await supabase.from("orders").select("id,assigned_writer_id").in("id",adminRecords.map(o=>o.id));
+   if(!assignmentResults.error){
+     const assignmentById=new Map((assignmentResults.data||[]).map(x=>[x.id,x.assigned_writer_id]));
+     adminRecords.forEach(o=>o.assigned_writer_id=assignmentById.get(o.id)||null);
+   }
+ }
  $("adminTotal").textContent=adminRecords.length;
  $("adminNew").textContent=adminRecords.filter(o=>o.status==="submitted").length;
  $("adminQuoted").textContent=adminRecords.filter(o=>o.status==="quoted").length;
@@ -198,7 +206,14 @@ async function saveAdminOrder(id){
  if(!ADMIN_STATUSES.includes(status))return;
  if(status==="quoted" && amount===null)return showNotice("adminStatus","Add a quote amount before marking a request quoted.","error");
  if(o.status==="paid" && status!==o.status)return showNotice("adminStatus","Paid orders require a secure server-side transition workflow. This dashboard cannot alter their status.","error");
+ const assignee=Array.from(document.querySelectorAll(".admin-assignee")).find(x=>x.dataset.order===id);
+ const selectedWriter=assignee?.value||null;
+ if(selectedWriter && !adminWriters.some(w=>w.id===selectedWriter))return showNotice("adminStatus","Select a valid PEH specialist.","error");
  const {error}=await supabase.from("orders").update({quote_amount:amount,status}).eq("id",id);
+ if(!error && assignee && (selectedWriter!== (o.assigned_writer_id||null))){
+   const {error:assignError}=await supabase.from("orders").update({assigned_writer_id:selectedWriter}).eq("id",id);
+   if(assignError)return showNotice("adminStatus","Quote saved, but writer assignment failed. Check that supabase-writers-migration.sql has been applied: "+assignError.message,"error");
+ }
  if(error)return showNotice("adminStatus","Update failed: "+error.message,"error");
  showNotice("adminStatus","Quote and status saved.","success");
  await loadAdmin();
