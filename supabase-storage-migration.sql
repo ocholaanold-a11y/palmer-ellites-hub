@@ -6,7 +6,7 @@
 
 update storage.buckets
 set public = false,
-    file_size_limit = 5242880
+    file_size_limit = 52428800
 where id = 'peh-order-files';
 
 -- Students can view/download only their own order files.
