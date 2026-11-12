@@ -6,3 +6,18 @@
 .brand-symbol{width:44px;height:44px;object-fit:contain;flex-shrink:0;border-radius:12px}
 .footer-brand .brand-symbol{background:#fff;padding:3px}
 @media(max-width:650px){.brand-symbol{width:37px;height:37px}}
+
+/* PEH phase 2: owner operations, quotations and protected order review */
+.admin-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:4px 0 26px}
+.admin-summary>div{border:1px solid var(--line);border-radius:13px;background:var(--light);padding:15px}
+.admin-summary strong{display:block;color:var(--green);font-family:Outfit,sans-serif;font-size:30px;line-height:1.1}
+.admin-summary span{font-size:12px;color:var(--muted)}
+.admin-order{border:1px solid var(--line);padding:20px 22px;border-radius:13px;margin:15px 0;background:white}
+.admin-order-heading{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px}
+.admin-order-heading>div{display:flex;align-items:center;flex-wrap:wrap;gap:10px}
+.admin-order-heading small{color:var(--muted)}
+.admin-order p{font-size:13px;white-space:pre-wrap;overflow-wrap:anywhere}
+.admin-controls{display:grid;grid-template-columns:1fr 1fr auto;align-items:end;gap:12px}
+.admin-controls label{margin:0}
+.admin-controls button{min-height:46px}
+@media(max-width:700px){.admin-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.admin-controls{grid-template-columns:1fr}}
