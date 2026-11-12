@@ -4,5 +4,9 @@
 // Never put a Supabase service_role key, Stripe secret, or other secret here.
 window.PEH_CONFIG = {
   supabaseUrl: "",
-  supabaseAnonKey: ""
+  supabaseAnonKey: "",
+  // Site owner may edit the default and available quote currencies here.
+  // Currency selection is a preference only until checkout is integrated.
+  defaultCurrency: "USD",
+  currencyOptions: ["USD", "KES", "EUR", "GBP", "CAD", "AUD", "INR", "MYR", "PHP", "SGD", "AED", "JPY", "CNY", "ZAR", "NGN"]
 };
