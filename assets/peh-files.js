@@ -146,6 +146,40 @@
      await getFilesForOrder(o,group);
    }
  }
- studentPanel.querySelector(".peh-refresh-files").addEventListener("click",()=>refreshFiles(false,studentPanel));
- adminPanel.querySelector(".peh-refresh-files").addEventListener("click",()=>refreshFiles(true,adminPanel));
+ // Clear previously rendered student documents on every account transition.
+ // Otherwise a second person using the same browser could see old filenames
+ // even though Supabase RLS would reject downloads.
+ let fileViewerUser=null;
+ let fileViewVersion=0;
+ function clearPrivateFiles(){
+   fileViewVersion++;
+   for(const p of [studentPanel,adminPanel]){
+     p.querySelector(".peh-file-results")?.replaceChildren();
+   }
+   studentPanel.querySelector(".peh-file-results").textContent="Click Refresh my files to load documents for the signed-in account.";
+   adminPanel.querySelector(".peh-file-results").textContent="Refresh files after administrator authentication.";
+ }
+ async function refreshFilesForAccount(admin,panel){
+   const version=++fileViewVersion;
+   const {data:auth}=await supabase.auth.getUser();
+   if(!auth?.user){clearPrivateFiles();return;}
+   if(fileViewerUser!==auth.user.id){fileViewerUser=auth.user.id;clearPrivateFiles();}
+   // The existing loader validates ownership via user_id; guard account switch
+   // by clearing all document rows as soon as authentication changes.
+   await refreshFiles(admin,panel);
+   if(version!==fileViewVersion && fileViewerUser!==auth.user.id)clearPrivateFiles();
+ }
+ let fileChecks=0;
+ const fileAuthReady=setInterval(()=>{
+   fileChecks++;
+   if(typeof supabase!=="undefined"&&supabase){
+     clearInterval(fileAuthReady);
+     supabase.auth.onAuthStateChange((_event,session)=>{
+       const next=session?.user?.id||null;
+       if(fileViewerUser!==next){fileViewerUser=next;clearPrivateFiles();}
+     });
+   }else if(fileChecks>20)clearInterval(fileAuthReady);
+ },500);
+ studentPanel.querySelector(".peh-refresh-files").addEventListener("click",()=>refreshFilesForAccount(false,studentPanel));
+ adminPanel.querySelector(".peh-refresh-files").addEventListener("click",()=>refreshFilesForAccount(true,adminPanel));
 })();
