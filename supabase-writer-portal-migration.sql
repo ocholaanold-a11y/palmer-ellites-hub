@@ -53,18 +53,178 @@ $$;
 revoke all on function public.peh_get_my_writer_projects() from public;
 grant execute on function public.peh_get_my_writer_projects() to authenticated;
 
+-- Storage RLS checks must not depend on an assigned writer having direct
+-- SELECT permissions on the orders table. This definer safely verifies one
+-- order and caller relationship without exposing other order data.
+create or replace function public.peh_writer_can_access_file(
+  p_owner uuid,p_order uuid,p_upload boolean default false
+)
+returns boolean language sql security definer stable set search_path=''
+as $
+  select exists(
+    select 1 from public.orders o
+    join public.peh_writer_accounts wa on wa.writer_id=o.assigned_writer_id
+    where wa.user_id=(select auth.uid())
+      and o.id=p_order and o.user_id=p_owner
+      and (not p_upload or o.status <> 'cancelled')
+  );
+$;
+revoke all on function public.peh_writer_can_access_file(uuid,uuid,boolean) from public;
+grant execute on function public.peh_writer_can_access_file(uuid,uuid,boolean) to authenticated;
+
 -- Assigned writers can view files for their orders. They cannot access any
 -- unassigned order, and they cannot update/delete existing stored files.
 drop policy if exists "peh assigned writers read order files" on storage.objects;
 create policy "peh assigned writers read order files"
 on storage.objects for select to authenticated using(
   bucket_id='peh-order-files'
+  and (storage.foldername(name))[1] ~* '^[0-9a-f-]{36}
+);
+
+-- Writer-created files must be prefixed DELIVERED- for easier distinction;
+-- administrator approval is still required to mark the order Delivered.
+drop policy if exists "peh assigned writers upload drafts" on storage.objects;
+create policy "peh assigned writers upload drafts"
+on storage.objects for insert to authenticated with check(
+  bucket_id='peh-order-files'
+  and storage.filename(name) like 'DELIVERED-%'
+  and (storage.foldername(name))[1] ~* '^[0-9a-f-]{36}
+);
+-- Never allow a writer to update order payment or delivery status directly.
+-- Never grant write access to customer order descriptions or contact details.
+
+  and (storage.foldername(name))[2] ~* '^[0-9a-f-]{36}
+);
+
+-- Writer-created files must be prefixed DELIVERED- for easier distinction;
+-- administrator approval is still required to mark the order Delivered.
+drop policy if exists "peh assigned writers upload drafts" on storage.objects;
+create policy "peh assigned writers upload drafts"
+on storage.objects for insert to authenticated with check(
+  bucket_id='peh-order-files'
+  and storage.filename(name) like 'DELIVERED-%'
   and exists(
     select 1 from public.orders o
     join public.peh_writer_accounts wa on wa.writer_id=o.assigned_writer_id
     where wa.user_id=(select auth.uid())
       and o.user_id::text=(storage.foldername(name))[1]
       and o.id::text=(storage.foldername(name))[2]
+      and o.status not in ('cancelled')
+  )
+);
+-- Never allow a writer to update order payment or delivery status directly.
+-- Never grant write access to customer order descriptions or contact details.
+
+  and public.peh_writer_can_access_file(
+    ((storage.foldername(name))[1])::uuid,
+    ((storage.foldername(name))[2])::uuid,false
+  )
+);
+
+-- Writer-created files must be prefixed DELIVERED- for easier distinction;
+-- administrator approval is still required to mark the order Delivered.
+drop policy if exists "peh assigned writers upload drafts" on storage.objects;
+create policy "peh assigned writers upload drafts"
+on storage.objects for insert to authenticated with check(
+  bucket_id='peh-order-files'
+  and storage.filename(name) like 'DELIVERED-%'
+  and exists(
+    select 1 from public.orders o
+    join public.peh_writer_accounts wa on wa.writer_id=o.assigned_writer_id
+    where wa.user_id=(select auth.uid())
+      and o.user_id::text=(storage.foldername(name))[1]
+      and o.id::text=(storage.foldername(name))[2]
+      and o.status not in ('cancelled')
+  )
+);
+-- Never allow a writer to update order payment or delivery status directly.
+-- Never grant write access to customer order descriptions or contact details.
+
+  and (storage.foldername(name))[2] ~* '^[0-9a-f-]{36}
+);
+-- Never allow a writer to update order payment or delivery status directly.
+-- Never grant write access to customer order descriptions or contact details.
+
+  and (storage.foldername(name))[2] ~* '^[0-9a-f-]{36}
+);
+
+-- Writer-created files must be prefixed DELIVERED- for easier distinction;
+-- administrator approval is still required to mark the order Delivered.
+drop policy if exists "peh assigned writers upload drafts" on storage.objects;
+create policy "peh assigned writers upload drafts"
+on storage.objects for insert to authenticated with check(
+  bucket_id='peh-order-files'
+  and storage.filename(name) like 'DELIVERED-%'
+  and exists(
+    select 1 from public.orders o
+    join public.peh_writer_accounts wa on wa.writer_id=o.assigned_writer_id
+    where wa.user_id=(select auth.uid())
+      and o.user_id::text=(storage.foldername(name))[1]
+      and o.id::text=(storage.foldername(name))[2]
+      and o.status not in ('cancelled')
+  )
+);
+-- Never allow a writer to update order payment or delivery status directly.
+-- Never grant write access to customer order descriptions or contact details.
+
+  and public.peh_writer_can_access_file(
+    ((storage.foldername(name))[1])::uuid,
+    ((storage.foldername(name))[2])::uuid,false
+  )
+);
+
+-- Writer-created files must be prefixed DELIVERED- for easier distinction;
+-- administrator approval is still required to mark the order Delivered.
+drop policy if exists "peh assigned writers upload drafts" on storage.objects;
+create policy "peh assigned writers upload drafts"
+on storage.objects for insert to authenticated with check(
+  bucket_id='peh-order-files'
+  and storage.filename(name) like 'DELIVERED-%'
+  and exists(
+    select 1 from public.orders o
+    join public.peh_writer_accounts wa on wa.writer_id=o.assigned_writer_id
+    where wa.user_id=(select auth.uid())
+      and o.user_id::text=(storage.foldername(name))[1]
+      and o.id::text=(storage.foldername(name))[2]
+      and o.status not in ('cancelled')
+  )
+);
+-- Never allow a writer to update order payment or delivery status directly.
+-- Never grant write access to customer order descriptions or contact details.
+
+  and public.peh_writer_can_access_file(
+    ((storage.foldername(name))[1])::uuid,
+    ((storage.foldername(name))[2])::uuid,true
+  )
+);
+-- Never allow a writer to update order payment or delivery status directly.
+-- Never grant write access to customer order descriptions or contact details.
+
+  and (storage.foldername(name))[2] ~* '^[0-9a-f-]{36}
+);
+
+-- Writer-created files must be prefixed DELIVERED- for easier distinction;
+-- administrator approval is still required to mark the order Delivered.
+drop policy if exists "peh assigned writers upload drafts" on storage.objects;
+create policy "peh assigned writers upload drafts"
+on storage.objects for insert to authenticated with check(
+  bucket_id='peh-order-files'
+  and storage.filename(name) like 'DELIVERED-%'
+  and exists(
+    select 1 from public.orders o
+    join public.peh_writer_accounts wa on wa.writer_id=o.assigned_writer_id
+    where wa.user_id=(select auth.uid())
+      and o.user_id::text=(storage.foldername(name))[1]
+      and o.id::text=(storage.foldername(name))[2]
+      and o.status not in ('cancelled')
+  )
+);
+-- Never allow a writer to update order payment or delivery status directly.
+-- Never grant write access to customer order descriptions or contact details.
+
+  and public.peh_writer_can_access_file(
+    ((storage.foldername(name))[1])::uuid,
+    ((storage.foldername(name))[2])::uuid,false
   )
 );
 
