@@ -162,15 +162,15 @@
 }
 /* The three example cards get coordinated pastel fades while keeping
    identical padding, row heights, and column alignment. */
-.hero .screen-line:nth-of-type(1){
+.hero .screen-line:nth-of-type(2){
   background:linear-gradient(105deg,#f1f9f2 0%,#fbfdf9 100%);
   border-color:#d7e8d9;
 }
-.hero .screen-line:nth-of-type(2){
+.hero .screen-line:nth-of-type(3){
   background:linear-gradient(105deg,#fff3df 0%,#fffdf6 100%);
   border-color:#f0dfba;
 }
-.hero .screen-line:nth-of-type(3){
+.hero .screen-line:nth-of-type(4){
   background:linear-gradient(105deg,#eaf4fa 0%,#f9fcfc 100%);
   border-color:#d9e9f0;
 }
