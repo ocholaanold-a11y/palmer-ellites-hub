@@ -24,6 +24,7 @@
     section.id="pehMessages-"+view.kind;
     const heading=make("h3","",view.title);
     const intro=make("p","",view.intro);
+    const safety=make("p","peh-message-safety","Safety: Never share personal contact details, identity documents, passwords or payment information. Writers must not request private payments or threaten clients. Report inappropriate messages to PEH administrators.");
     const controls=make("div","peh-message-controls");
     const orderLabel=make("label","","Choose an order");
     const select=make("select");
@@ -51,7 +52,7 @@
     send.type="submit";
     form.append(bodyLabel,send);
     controls.append(orderLabel,refreshOrders,refreshMessages);
-    section.append(heading,intro,controls,status,thread,form);
+    section.append(heading,intro,safety,controls,status,thread,form);
     if(view.kind==="client")view.root.append(section);
     else if(view.kind==="writer")view.root.append(section);
     else {
@@ -172,6 +173,33 @@
             const label=mine?"You":m.sender_role==="admin"?"PEH Administrator":m.sender_role==="writer"?"Assigned specialist":"Client";
             meta.append(make("strong","",label),make("time","",new Date(m.created_at).toLocaleString()));
             item.append(meta,make("p","",m.body));
+            if(!mine){
+              const report=make("button","button secondary peh-report-button","Report this message");
+              report.type="button";
+              report.addEventListener("click",async()=>{
+                if(!window.confirm("Report this message privately to PEH administrators? False reports may be reviewed."))return;
+                const choices=["personal_information","off_platform_contact","payment_request","threat_or_extortion","harassment","other"];
+                const reasonText=window.prompt(
+                  "Choose a reason: personal_information, off_platform_contact, payment_request, threat_or_extortion, harassment, or other",
+                  "personal_information"
+                );
+                if(reasonText===null)return;
+                const reason=reasonText.trim().toLowerCase();
+                if(!choices.includes(reason)){
+                  view.setStatus("Use one of the listed report reasons.",true);return;
+                }
+                const details=window.prompt("Optional details for the PEH safeguarding team (do not enter passwords or payment information):","")||"";
+                if(details.length>1000){view.setStatus("Report details must be under 1,000 characters.",true);return;}
+                report.disabled=true;
+                const {error:reportError}=await supabase.from("peh_message_reports").insert({
+                  message_id:m.id,order_id:m.order_id,reason,details
+                });
+                report.disabled=false;
+                if(reportError)view.setStatus("Could not file the report: "+reportError.message,true);
+                else {view.setStatus("Your report was submitted confidentially to PEH administrators.");report.textContent="Reported";report.disabled=true;}
+              });
+              item.append(report);
+            }
             thread.append(item);
           }
         }
