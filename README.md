@@ -149,6 +149,25 @@ PEH account form now includes **Forgot password?** for signed-out users and **Ch
 
 **Security:** The frontend intentionally uses a generic confirmation message when requesting a reset to avoid user enumeration. Passwords are never sent to PEH database tables or administrators. Supabase handles token verification and password updates.
 
+## Phase 9: Private order-based messaging (students, assigned writers, admins)
+
+PEH includes **`assets/peh-messages.js`**, which creates three conversation sections: **Messages about my orders** in the customer portal, **Order conversations** in Administrator Workspace, and **Assigned project messages** in a verified writer's workspace. All participants on an order see one shared order thread. Messages are text-only (1–3,000 characters); senders' real names and email addresses are **not exposed** in message threads. Messages cannot be edited or deleted from client sessions. New messages load with **Refresh messages** and 30-second polling while an opened workspace is visible. Email alerts are **not** included and remain deferred until a verified sending domain is set up.
+
+### Activate in Supabase (required)
+1. Open [`supabase-messaging-migration.sql`](./supabase-messaging-migration.sql) in this repository, copy all SQL, and execute it in **Supabase SQL Editor** as the **postgres** role. This requires the prior writers/account migration and existing order data.
+2. The migration creates `public.peh_order_messages`, restrictive row-level participant checks, a server-side sender validation trigger, and a definer helper `public.peh_message_role(order_id)`. Students can only message on orders they own. A specialist must be linked under `peh_writer_accounts` **and currently assigned** to that order to participate. PEH admins can participate on existing orders.
+3. Wait for Cloudflare Pages to deploy the updated `main` branch; hard-refresh with **Ctrl + Shift + R**.
+
+### Test safely with dummy accounts and orders
+1. Sign in as **Student A**, open **Messages about my orders**, select a harmless test order and send “Can you clarify my test instructions?”
+2. Sign out, sign in as the **assigned writer**, open **Assigned project messages** and click **Load my conversations**; choose the same order and reply. A non-assigned writer must **not** see or read it.
+3. Sign out, sign in as the **PEH admin**, open **Order conversations → Load my conversations** and send a response to the same order.
+4. Sign in as **Student A** again, refresh messages and verify the client/writer/admin messages are present.
+5. Sign in as **Student B** with their *different* account. Their order dropdown must not list Student A's order; they must not be able to fetch or insert A's messages by manipulating a request. Also test a writer who is removed from an order: their messages should no longer be accessible.
+6. Test on a mobile screen and account switching. No content should persist on screen after signing out.
+
+**Important before production:** Browser hiding is not authorization. Inspect Supabase RLS and GRANT permissions regularly, especially after future changes. This feature uses polling rather than a Supabase Realtime subscription. Implement abuse prevention (rate limits, anti-spam), moderation, retention/deletion requests, message notifications, and incident logging before collecting sensitive customer data. Never place service-role or other server secrets in the website.
+
 ## Deploy for free on Cloudflare Pages
 
 1. Log in to [Cloudflare](https://dash.cloudflare.com/) and open **Workers & Pages**.
