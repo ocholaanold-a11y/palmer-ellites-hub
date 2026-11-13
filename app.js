@@ -49,15 +49,35 @@ $("profileModal").addEventListener("click",e=>{if(e.target===$("profileModal"))$
 const settings=window.PEH_CONFIG||{};
 const isConfigured=typeof settings.supabaseUrl==="string"&&/^https:\/\/.+supabase.co\/?$/.test(settings.supabaseUrl)&&settings.supabaseAnonKey&&settings.supabaseAnonKey!=="REPLACE_ME";
 let supabase=null;
+let pehPasswordRecoveryMode=false;
 async function initSupabase(){
  if(!isConfigured)return;
  try{
   const mod=await import("https://esm.sh/@supabase/supabase-js@2.57.0");
   supabase=mod.createClient(settings.supabaseUrl,settings.supabaseAnonKey);
+  // Register before loading the session so PASSWORD_RECOVERY links are caught.
+  supabase.auth.onAuthStateChange((event,s)=>{
+    if(event==="PASSWORD_RECOVERY"){
+      pehPasswordRecoveryMode=true;
+      $("pehResetRequestForm").classList.add("hidden");
+      $("pehNewPasswordTitle").textContent="Set your new password";
+      $("pehNewPasswordHint").textContent="Your reset link was verified. Set a unique password with at least 12 characters.";
+      $("pehNewPasswordForm").classList.remove("hidden");
+      $("pehNewPasswordForm").scrollIntoView({behavior:"smooth",block:"center"});
+      window.location.hash="dashboard";
+      showNotice("authStatus","Password reset link verified. Choose a new password below.","success");
+    }
+    if(event==="SIGNED_OUT"){
+      pehPasswordRecoveryMode=false;
+      $("pehNewPasswordForm").reset();
+      $("pehNewPasswordForm").classList.add("hidden");
+    }
+    showAuth(s?.user);
+    if(s?.user)loadOrders();
+  });
   const {data:{session}}=await supabase.auth.getSession();
   showAuth(session?.user);
   loadPublicWriters();
-  supabase.auth.onAuthStateChange((_event,s)=>{showAuth(s?.user);if(s?.user)loadOrders();});
  }catch(err){showNotice("authStatus","Secure account service is currently unavailable.","error")}
 }
 function showNotice(id,msg,type){const el=$(id);el.textContent=msg;el.className="form-status "+(type==="error"?"feedback-error":type==="success"?"feedback-success":"")}
@@ -94,6 +114,9 @@ function showAuth(user){
  $("signIn").classList.toggle("hidden",!!user);$("signUp").classList.toggle("hidden",!!user);
  $("authPassword").required=!user;$("authEmail").required=!user;
  $("authForm").classList.toggle("hidden",!!user);
+ $("pehForgotPassword").classList.toggle("hidden",!!user);
+ $("pehChangePassword").classList.toggle("hidden",!user||pehPasswordRecoveryMode);
+ if(user)$("pehResetRequestForm").classList.add("hidden");
  if(user)loadOrders();else $("ordersPanel").innerHTML='<p>Sign in to see your projects.</p>';
  checkAdmin(user);
 }
@@ -112,6 +135,79 @@ async function authAction(type){
 $("signIn").addEventListener("click",()=>authAction("signin"));
 $("signUp").addEventListener("click",()=>authAction("signup"));
 $("signOut").addEventListener("click",async()=>{if(supabase)await supabase.auth.signOut();});
+
+function pehPasswordMessage(id,msg,error=false){
+ const el=$(id);
+ el.textContent=msg;
+ el.className="form-status "+(error?"feedback-error":"feedback-success");
+}
+$("pehForgotPassword").addEventListener("click",()=>{
+ $("pehNewPasswordForm").classList.add("hidden");
+ $("pehResetEmail").value=$("authEmail").value.trim();
+ $("pehResetRequestForm").classList.remove("hidden");
+ $("pehResetRequestStatus").textContent="";
+ $("pehResetEmail").focus();
+});
+$("pehResetCancel").addEventListener("click",()=>{
+ $("pehResetRequestForm").reset();
+ $("pehResetRequestForm").classList.add("hidden");
+});
+$("pehChangePassword").addEventListener("click",()=>{
+ pehPasswordRecoveryMode=false;
+ $("pehResetRequestForm").classList.add("hidden");
+ $("pehNewPasswordForm").reset();
+ $("pehNewPasswordTitle").textContent="Change your password";
+ $("pehNewPasswordHint").textContent="Enter a new password with at least 12 characters.";
+ $("pehNewPasswordStatus").textContent="";
+ $("pehNewPasswordForm").classList.remove("hidden");
+ $("pehNewPassword").focus();
+});
+$("pehPasswordCancel").addEventListener("click",()=>{
+ if(pehPasswordRecoveryMode){
+   pehPasswordMessage("pehNewPasswordStatus","Set your password to complete recovery, or sign out to cancel.",true);
+   return;
+ }
+ $("pehNewPasswordForm").reset();
+ $("pehNewPasswordForm").classList.add("hidden");
+});
+$("pehResetRequestForm").addEventListener("submit",async e=>{
+ e.preventDefault();
+ const email=$("pehResetEmail").value.trim();
+ if(!email||!$("pehResetEmail").checkValidity())return pehPasswordMessage("pehResetRequestStatus","Enter a valid email address.",true);
+ if(!supabase)return pehPasswordMessage("pehResetRequestStatus","Account service unavailable. Try again shortly.",true);
+ const button=e.currentTarget.querySelector('button[type="submit"]');
+ button.disabled=true;button.textContent="Sending…";
+ try{
+   // This URL must be allow-listed in Supabase Auth URL Configuration.
+   const redirectTo=window.location.origin+window.location.pathname+"#dashboard";
+   const {error}=await supabase.auth.resetPasswordForEmail(email,{redirectTo});
+   if(error)pehPasswordMessage("pehResetRequestStatus","Unable to send a reset email: "+error.message,true);
+   else pehPasswordMessage("pehResetRequestStatus","If an eligible PEH account exists for this email, password-reset instructions will arrive shortly. Check your inbox and spam folder.");
+ }catch(err){pehPasswordMessage("pehResetRequestStatus","Unable to request a reset link. Check your connection.",true);}
+ finally{button.disabled=false;button.textContent="Send reset link";}
+});
+$("pehNewPasswordForm").addEventListener("submit",async e=>{
+ e.preventDefault();
+ const next=$("pehNewPassword").value,confirmPassword=$("pehConfirmPassword").value;
+ if(next.length<12)return pehPasswordMessage("pehNewPasswordStatus","Use a password with at least 12 characters.",true);
+ if(next!==confirmPassword)return pehPasswordMessage("pehNewPasswordStatus","Passwords do not match.",true);
+ if(!supabase)return pehPasswordMessage("pehNewPasswordStatus","Account service unavailable.",true);
+ const button=$("pehSavePassword");
+ button.disabled=true;button.textContent="Saving…";
+ try{
+   const {data:{user},error:userError}=await supabase.auth.getUser();
+   if(userError||!user)throw new Error("Your session has expired. Request a fresh reset link.");
+   const {error}=await supabase.auth.updateUser({password:next});
+   if(error)throw error;
+   pehPasswordRecoveryMode=false;
+   e.currentTarget.reset();
+   e.currentTarget.classList.add("hidden");
+   $("pehChangePassword").classList.remove("hidden");
+   pehPasswordMessage("authStatus","Your password has been updated successfully. Your account permissions and assigned projects are unchanged.");
+ }catch(err){
+   pehPasswordMessage("pehNewPasswordStatus",err?.message||"Could not update the password. Try again.",true);
+ }finally{button.disabled=false;button.textContent="Save new password";}
+});
 async function loadOrders(){
  if(!supabase)return;
  const version=accountRenderVersion;
