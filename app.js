@@ -178,8 +178,8 @@ $("pehResetRequestForm").addEventListener("submit",async e=>{
  const button=e.currentTarget.querySelector('button[type="submit"]');
  button.disabled=true;button.textContent="Sending…";
  try{
-   // This URL must be allow-listed in Supabase Auth URL Configuration.
-   const redirectTo=window.location.origin+window.location.pathname+"#dashboard";
+   // Redirect to the website root so Supabase can safely process the recovery callback.\n   // This URL must be allow-listed in Supabase Auth URL Configuration.
+   const redirectTo=window.location.origin+window.location.pathname;
    const {error}=await supabase.auth.resetPasswordForEmail(email,{redirectTo});
    if(error)pehPasswordMessage("pehResetRequestStatus","Unable to send a reset email: "+error.message,true);
    else pehPasswordMessage("pehResetRequestStatus","If an eligible PEH account exists for this email, password-reset instructions will arrive shortly. Check your inbox and spam folder.");
