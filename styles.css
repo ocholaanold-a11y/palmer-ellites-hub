@@ -60,3 +60,15 @@
 .peh-revision-item textarea{min-height:90px;resize:vertical}
 .peh-revision-entry{background:var(--light);border-left:3px solid var(--green);border-radius:5px;padding:10px;font-size:13px;white-space:pre-wrap}
 .peh-delivery-panel>h3,.peh-revision-panel>h3{margin-bottom:8px}
+
+/* Customer delivery notification inbox */
+.peh-notifications-panel{margin-top:22px}
+.peh-notification-heading{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.peh-notification-heading h3{margin:0}
+.peh-unread-count{font-size:12px;color:#087a49;font-weight:700}
+.peh-notification{border:1px solid var(--line);border-radius:12px;padding:15px;margin:12px 0;background:#fff;overflow-wrap:anywhere}
+.peh-notification.is-unread{border-left:4px solid var(--green);background:#f2fbf4}
+.peh-notification strong{display:block;color:var(--deep);margin-bottom:7px}
+.peh-notification p{margin:0 0 7px;font-size:14px}
+.peh-notification small{display:block;color:var(--muted);margin-bottom:10px}
+.peh-notification .button-row{margin:10px 0 0;gap:8px}
