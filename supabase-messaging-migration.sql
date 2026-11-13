@@ -71,7 +71,7 @@ create or replace function public.peh_writer_can_access_file(
   p_owner uuid,p_order uuid,p_upload boolean default false
 )
 returns boolean language sql security definer stable set search_path=''
-as $
+as $peh$
   select exists(
     select 1 from public.orders o
     join public.peh_writer_accounts wa on wa.writer_id=o.assigned_writer_id
@@ -79,7 +79,7 @@ as $
       and o.id=p_order and o.user_id=p_owner
       and (not p_upload or o.status <> 'cancelled')
   );
-$;
+$peh$;
 revoke all on function public.peh_writer_can_access_file(uuid,uuid,boolean) from public;
 grant execute on function public.peh_writer_can_access_file(uuid,uuid,boolean) to authenticated;
 
@@ -89,13 +89,13 @@ returns table (
   deadline timestamptz,status text,created_at timestamptz
 )
 language sql security definer stable set search_path=''
-as $
+as $peh$
   select o.id,o.user_id,o.service,o.description,o.deadline,o.status,o.created_at
   from public.orders o
   join public.peh_writer_accounts wa on wa.writer_id=o.assigned_writer_id
   where wa.user_id=(select auth.uid()) and wa.suspended=false
   order by o.created_at desc limit 50;
-$;
+$peh$;
 revoke all on function public.peh_get_my_writer_projects() from public;
 grant execute on function public.peh_get_my_writer_projects() to authenticated;
 
