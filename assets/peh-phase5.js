@@ -122,27 +122,49 @@
       const wrap=make("div","peh-revision-item");
       wrap.append(make("strong","",o.service+" · "+o.id.slice(0,8)+" · "+o.status));
       const label=make("label","", "Upload final or revised document (50 MB max)");
-      const input=make("input");input.type="file";input.accept=".pdf,.doc,.docx,.txt,.xls,.xlsx,.csv,.ppt,.pptx,.png,.jpg,.jpeg";
+      const input=make("input");input.type="file";input.multiple=true;input.accept=".pdf,.doc,.docx,.txt,.xls,.xlsx,.csv,.ppt,.pptx,.png,.jpg,.jpeg";
+      label.textContent="Upload completed or revised documents (up to 10 files, maximum 50 MB each)";
       label.append(input);
-      const btn=make("button","button primary","Upload deliverable");
-      btn.type="button";
-      const feedback=make("p","form-status");
-      btn.addEventListener("click",async()=>{
-        let file=input.files?.[0];
-        try{validatedFile(file);}catch(ex){textNotice(feedback,ex.message,true);return;}
-        btn.disabled=true;
-        const path=o.user_id+"/"+o.id+"/DELIVERED-"+crypto.randomUUID()+"-"+safeName(file.name);
-        try{
-          await uploadDelivery(file,path,pct=>{btn.textContent="Uploading: "+pct+"%";});
-          // Do not ever mark payment status as paid from this browser.
-          const {error:statusError}=await supabase.from("orders").update({status:"delivered"}).eq("id",o.id);
-          if(statusError)textNotice(feedback,"File uploaded, but order status could not be updated: "+statusError.message,true);
-          else textNotice(feedback,"Document uploaded securely and order marked delivered.");
-          input.value="";
-        }catch(ex){textNotice(feedback,"Upload failed: "+(ex?.message||String(ex)),true);}
-        finally{btn.disabled=false;btn.textContent="Upload deliverable";}
+      const selected=make("p","form-status","Select one or more files.");
+      input.addEventListener("change",()=>{
+        const chosen=Array.from(input.files||[]);
+        selected.textContent=chosen.length?chosen.length+" selected: "+chosen.map(f=>f.name).join(", "):"Select one or more files.";
       });
-      wrap.append(label,btn,feedback);adminOrders.append(wrap);
+      const btn=make("button","button primary","Upload deliverables");
+      btn.type="button";
+      const feedback=make("p","form-status");feedback.setAttribute("role","status");
+      btn.addEventListener("click",async()=>{
+        const files=Array.from(input.files||[]);
+        if(!files.length){textNotice(feedback,"Choose at least one document.",true);return;}
+        if(files.length>10){textNotice(feedback,"Select no more than 10 files at once.",true);return;}
+        try{files.forEach(validatedFile);}catch(ex){textNotice(feedback,ex.message,true);return;}
+        btn.disabled=true;input.disabled=true;
+        let uploaded=0;const failures=[];
+        try{
+          for(const [index,file] of files.entries()){
+            const path=o.user_id+"/"+o.id+"/DELIVERED-"+crypto.randomUUID()+"-"+safeName(file.name);
+            try{
+              await uploadDelivery(file,path,pct=>{
+                btn.textContent="Uploading "+(index+1)+"/"+files.length+": "+pct+"%";
+                feedback.textContent="Uploading "+file.name+" ("+pct+"%)";
+              });
+              uploaded++;
+            }catch(ex){failures.push(file.name+": "+(ex?.message||String(ex)));}
+          }
+          let result=uploaded+" of "+files.length+" deliverables uploaded.";
+          if(uploaded===files.length){
+            // Mark delivered only after EVERY selected file succeeds.
+            const {error:statusError}=await supabase.from("orders").update({status:"delivered"}).eq("id",o.id);
+            if(statusError){textNotice(feedback,result+" Order status could not be updated: "+statusError.message,true);}
+            else {textNotice(feedback,result+" Order marked Delivered.");input.value="";selected.textContent="Select one or more files.";}
+          }else{
+            textNotice(feedback,result+" Failed: "+failures.join("; ")+". Successful documents remain saved. Please verify files before retrying the failed items. Order status has NOT been changed.",true);
+          }
+        }finally{
+          btn.disabled=false;input.disabled=false;btn.textContent="Upload deliverables";
+        }
+      });
+      wrap.append(label,selected,btn,feedback);adminOrders.append(wrap);
     }
     const {data:revisions,error:rError}=await supabase.from("peh_revisions").select("id,order_id,instructions,status,admin_note,created_at").order("created_at",{ascending:false}).limit(70);
     adminRevisions.replaceChildren();
