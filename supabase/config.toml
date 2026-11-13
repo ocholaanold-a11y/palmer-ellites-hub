@@ -1,0 +1,5 @@
+# PEH delivery-email function accepts only authenticated internal database webhooks.
+# JWT gateway verification is disabled because webhook uses a custom secret header;
+# the function validates x-peh-webhook-secret before accessing the database.
+[functions.peh-delivery-email]
+verify_jwt = false
