@@ -93,3 +93,125 @@
 .peh-password-panel label{display:block;margin:10px 0}
 .peh-password-panel input{display:block;width:100%;min-height:44px}
 .peh-password-panel .button-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+
+
+/* PEH hero and services refresh: upright layout, refined gold, softly varied cards */
+:root{
+  --peh-gold:#c49a40;
+  --peh-gold-soft:#fff5dc;
+  --peh-gold-line:#e8cf91;
+}
+.hero{
+  background:linear-gradient(120deg,#f1faf5 0%,#fffdf6 55%,#f4f9ec 100%);
+}
+.hero-graphic:before{
+  background:radial-gradient(circle at 34% 34%,#e3f7e9 0%,#d9efce 45%,#f9e9b8 100%);
+  opacity:.62;
+}
+.hero .screen{
+  transform:none;
+  rotate:0deg;
+  min-width:0;
+  border:1px solid var(--peh-gold-line);
+  background:linear-gradient(145deg,#ffffff 0%,#fffdf8 100%);
+  box-shadow:0 23px 58px rgba(19,76,44,.12),0 3px 0 rgba(196,154,64,.15);
+}
+.hero .screen .eyebrow{
+  color:#916b18;
+}
+.hero .screen h3{
+  max-width:none;
+  color:var(--deep);
+}
+.hero .screen .dots{
+  color:#d5bc7b;
+}
+.hero .screen-line{
+  display:grid;
+  grid-template-columns:64px minmax(0,1fr) auto;
+  gap:14px;
+  align-items:center;
+  min-height:92px;
+  border:1px solid #e5ebdf;
+  border-radius:16px;
+  padding:13px 15px;
+  margin-top:14px;
+  background:#fff;
+  box-shadow:0 5px 14px rgba(15,58,40,.035);
+  transform:none;
+}
+.hero .screen-line > div{min-width:0;}
+.hero .screen-line .tile{
+  display:grid;
+  place-items:center;
+  width:62px;
+  min-height:62px;
+  margin:0;
+  background:rgba(255,255,255,.65);
+  border:1px solid rgba(22,75,47,.07);
+}
+.hero .screen-line b{font-size:13px;line-height:1.4;color:#153a2b;}
+.hero .screen-line small{color:#627b6e;font-size:11px;line-height:1.4;margin-top:3px;}
+.hero .screen-line .status{
+  flex-shrink:0;
+  padding:6px 12px;
+  background:rgba(255,255,255,.65);
+  color:#176544;
+  border:1px solid rgba(14,91,57,.1);
+  font-weight:700;
+}
+/* The three example cards get coordinated pastel fades while keeping
+   identical padding, row heights, and column alignment. */
+.hero .screen-line:nth-of-type(1){
+  background:linear-gradient(105deg,#f1f9f2 0%,#fbfdf9 100%);
+  border-color:#d7e8d9;
+}
+.hero .screen-line:nth-of-type(2){
+  background:linear-gradient(105deg,#fff3df 0%,#fffdf6 100%);
+  border-color:#f0dfba;
+}
+.hero .screen-line:nth-of-type(3){
+  background:linear-gradient(105deg,#eaf4fa 0%,#f9fcfc 100%);
+  border-color:#d9e9f0;
+}
+.hero .mini-callout{
+  background:linear-gradient(110deg,#08764e,#116a50 70%,#93701d);
+  border:1px solid #b18e3f;
+  right:12px;
+  bottom:-19px;
+}
+/* The full 13-service grid is also kept level and receives gentle
+   alternating fades without changing its content or functionality. */
+#servicesGrid{align-items:stretch;}
+#servicesGrid .service-card{
+  height:100%;
+  display:flex;
+  flex-direction:column;
+  transform:none;
+  border-color:#dce9e2;
+  box-shadow:0 7px 19px rgba(13,63,43,.045);
+}
+#servicesGrid .service-card:nth-child(4n+1){background:linear-gradient(145deg,#f0faf3,#ffffff 70%);}
+#servicesGrid .service-card:nth-child(4n+2){background:linear-gradient(145deg,#fff6e7,#ffffff 70%);border-color:#ecdfc1;}
+#servicesGrid .service-card:nth-child(4n+3){background:linear-gradient(145deg,#edf5fc,#ffffff 70%);border-color:#dce8ef;}
+#servicesGrid .service-card:nth-child(4n){background:linear-gradient(145deg,#f7f0fa,#ffffff 70%);border-color:#e9e0ec;}
+#servicesGrid .service-card .text-link{margin-top:auto;}
+#servicesGrid .service-card:hover{
+  transform:translateY(-2px);
+  border-color:var(--peh-gold-line);
+  box-shadow:0 13px 28px rgba(17,74,44,.09);
+}
+@media(max-width:650px){
+  .hero .screen{padding:22px 16px;}
+  .hero .screen-line{
+    grid-template-columns:52px minmax(0,1fr) auto;
+    gap:9px; padding:11px 9px; min-height:78px;
+  }
+  .hero .screen-line .tile{width:50px;min-height:50px;font-size:20px;}
+  .hero .screen-line .status{font-size:10px;padding:5px 7px;}
+  .hero .screen h3{font-size:24px;}
+  .hero .mini-callout{right:4px;bottom:-24px;}
+}
+@media(prefers-reduced-motion:reduce){
+  #servicesGrid .service-card{transition:none;}
+}
