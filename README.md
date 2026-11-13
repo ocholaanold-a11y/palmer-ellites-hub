@@ -135,6 +135,20 @@ Run the full [`supabase-writer-portal-migration.sql`](./supabase-writer-portal-m
 
 **Operational limits:** Writer accounts cannot change payments, prices, clients, or order status. Website email sending remains on hold until you obtain and verify a domain. Client file upload protections still require production hardening (virus scanning, server-side file checks, retention, privacy safeguards, child-safety restrictions). Testing should use only dummy files. A writer's work is a draft until an administrator approves it. If copying any draft fails, previously successful copies remain stored, the order should stay at its prior status, and staff should inspect before retrying. This is not a malware-scanning or content moderation system.
 
+## Account recovery and password changes (all roles)
+
+PEH account form now includes **Forgot password?** for signed-out users and **Change password** for signed-in users. Both use **Supabase Auth** and do not alter the membership tables `peh_admins` or `peh_writer_accounts`. New passwords must contain at least 12 characters. The recovery link opens the PEH website, where Supabase verifies the link and offers a new-password form.
+
+### Required Supabase Auth configuration
+1. In Supabase go to **Authentication → URL Configuration**. Set the **Site URL** to `https://palmer-ellites-hub.pages.dev/` unless a custom domain is being used. Add the exact URL `https://palmer-ellites-hub.pages.dev/` under **Redirect URLs** (or use the official Supabase pattern for this site). Do not add unrelated domains.
+2. In **Authentication → Email Templates → Reset Password**, keep Supabase's valid confirmation / recovery link variable. Avoid replacing a functional template with a plain link to PEH; the token-based Supabase link is needed to verify ownership.
+3. For controlled testing, use an email address allowed by the project’s built-in Supabase email service. Built-in email is rate-limited and may restrict recipients; it is not a production bulk sending service. A verified sending domain and configured SMTP provider will be required for reliable real-user recovery.
+4. On the PEH site sign out, click **Forgot password?**, submit the registered email, and open the message. The recovery link should open the website and show **Set your new password**. Save a 12+ character password; then sign out and sign back in with the new password.
+5. While signed in, click **Change password**, enter and confirm the new password, and save. Depending on the Supabase project's reauthentication settings, an additional verification step may be required.
+6. Test both flows with dummy accounts, including a linked writer account, and verify the roles and assigned order permissions remain unchanged. Do not share reset links or tokens with administrators.
+
+**Security:** The frontend intentionally uses a generic confirmation message when requesting a reset to avoid user enumeration. Passwords are never sent to PEH database tables or administrators. Supabase handles token verification and password updates.
+
 ## Deploy for free on Cloudflare Pages
 
 1. Log in to [Cloudflare](https://dash.cloudflare.com/) and open **Workers & Pages**.
