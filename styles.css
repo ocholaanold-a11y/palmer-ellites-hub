@@ -234,3 +234,13 @@
  .peh-message-panel .peh-message-item{max-width:96%}
  .peh-message-panel .peh-message-controls .button{width:100%}
 }
+
+/* Phase 9 messaging safeguarding */
+.peh-message-safety{border-left:4px solid #c49a40;border-radius:9px;background:#fff8e8;padding:13px 16px;color:#60491d!important;font-size:13px!important}
+.peh-report-button{margin-top:9px;padding:7px 12px;font-size:11px}
+.peh-safeguard-review{margin:26px 0;scroll-margin-top:95px}
+.peh-safety-report{border:1px solid #e8dfcb;background:#fffdf8;border-radius:12px;padding:16px;margin:15px 0;overflow-wrap:anywhere}
+.peh-safety-report strong{display:block;color:#63461b;text-transform:capitalize}
+.peh-safety-report label{margin-top:12px}
+.peh-safety-report select{max-width:270px;margin:10px 0}
+.peh-safety-report button{margin-right:10px;margin-bottom:10px}
