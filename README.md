@@ -88,6 +88,27 @@ PEH now includes `assets/peh-phase5.js` (loaded on the website). It adds:
 
 **Limitations:** This release does not provide a separate writer-login portal, file virus scanning, secure messaging, automatic notifications or live payment processing. Admin delivery of a file and an order status change are separate operations; if the status change fails, the file may still have uploaded and should be checked before retrying. Revision functionality requires the SQL migration; without it, the portal shows a setup error rather than saving a request.
 
+## Phase 6: Customer delivery notifications (dashboard + email)
+
+**Implemented in GitHub, requires activation in Supabase:** the private notification inbox is in `assets/peh-notifications.js`, the Postgres migration in `supabase-notifications-migration.sql`, and the optional server-side email function in `supabase/functions/peh-delivery-email/index.ts`.
+
+### Step A — enable in-account notifications (no email provider needed)
+1. In Supabase SQL Editor select **postgres** and run all of `supabase-notifications-migration.sql`.
+2. In PEH as a test administrator, successfully upload all deliverable files to a test order. When its status changes **to delivered**, a private notification row is created by a database trigger.
+3. In the customer account open **My Account → My Notifications** and choose **Refresh notifications**. The inbox also checks periodically while open. Test **Mark as read** and **View my files**. Only that customer can read their own notifications under RLS.
+4. A notification is created only when order status transitions **to delivered**, not when an already-delivered order is resaved. Previously completed orders will not get retroactive notifications.
+
+### Step B — activate automatic email (separate server setup)
+1. Sign up for a transactional email service such as [Resend](https://resend.com/), **verify a sending domain you control**, and select a valid from-address such as `PEH <notifications@your-verified-domain.example>`. Never claim an unverified address is yours.
+2. In your PEH Supabase project, open **Edge Functions → Deploy a new function → Via Editor**. Use name **`peh-delivery-email`** and paste the contents of `supabase/functions/peh-delivery-email/index.ts`. Deploy it.
+3. Under **Edge Functions → Secrets**, add **`RESEND_API_KEY`**, **`PEH_EMAIL_FROM`** (your verified sending address), and **`PEH_WEBHOOK_SECRET`** (a newly generated long random secret). Do **not** paste these secrets in GitHub, this README or website JavaScript. The function also requires `SUPABASE_URL` and an admin server credential `SUPABASE_SERVICE_ROLE_KEY` available only inside Supabase Edge Function secrets; if that legacy variable is unavailable, configure an appropriate server-only key and adjust the function accordingly. Never use a public publishable key for privileged work.
+4. Under the Edge Function details/settings **disable default JWT verification only for this webhook function**. The function itself checks `x-peh-webhook-secret` before any database operation. The repository includes `supabase/config.toml` for CLI deployments.
+5. In **Supabase → Database → Webhooks**, create an enabled webhook named `peh-delivery-email`: table `public.peh_notifications`, event **INSERT only**, method **POST**, request URL `https://<your-project-ref>.supabase.co/functions/v1/peh-delivery-email`, request header `x-peh-webhook-secret` equal to the same secret from step 3. Include `Content-Type: application/json`. Never enable UPDATE here, since writing email delivery status updates the same row. Test with a harmless delivered order, then check **Edge Function logs** and your Resend email logs.
+6. The function looks up the recipient from the verified **Supabase Auth** user, not a customer-entered address; it never emails documents or signed file URLs. It records **pending / sending / sent / failed** server-side. Resend may accept the email before it reaches the recipient. Inspect the provider's logs for final delivery.
+7. Never share `RESEND_API_KEY`, `PEH_WEBHOOK_SECRET`, `SUPABASE_SERVICE_ROLE_KEY`, or `sb_secret_...` in chat or screenshots. This is a server deployment, **not** automatically deployed when Cloudflare Pages deploys the frontend.
+
+**Operational limitation:** The simple webhook handler makes one delivery attempt per event (plus provider idempotency). Failed events may need administrative retry with a separate server-side job; a full transactional outbox/queue, monitoring and bounce handling are production improvements. Sending domain registration and email provider quotas/costs are managed by the provider. Protect email content from sensitive personal details.
+
 ## Deploy for free on Cloudflare Pages
 
 1. Log in to [Cloudflare](https://dash.cloudflare.com/) and open **Workers & Pages**.
