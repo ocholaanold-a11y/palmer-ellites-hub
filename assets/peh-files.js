@@ -129,21 +129,29 @@
  }
  async function refreshFiles(admin,panel){
    const output=panel.querySelector(".peh-file-results");
+   const generation=fileViewVersion;
    output.replaceChildren();output.textContent="Loading your private files…";
    if(!supabase){output.textContent="Order service unavailable.";return;}
    const {data:auth}=await supabase.auth.getUser();
    if(!auth?.user){output.textContent="Sign in first.";return;}
+   const accountId=auth.user.id;
    if(admin&&!currentAdmin){output.textContent="Administrator access required.";return;}
+   const stillCurrent=()=>fileViewVersion===generation && fileViewerUser===accountId;
+   if(!stillCurrent())return;
    const query=supabase.from("orders").select("id,user_id,service,created_at").order("created_at",{ascending:false}).limit(30);
-   const {data,error}=await (admin?query:query.eq("user_id",auth.user.id));
+   const {data,error}=await (admin?query:query.eq("user_id",accountId));
+   if(!stillCurrent())return;
    output.replaceChildren();
    if(error){output.textContent="Unable to load your orders: "+error.message;return;}
    if(!data?.length){output.textContent="No orders found.";return;}
    for(const o of data){
+     if(!stillCurrent())return;
+     if(!admin&&o.user_id!==accountId)continue;
      const group=document.createElement("div");group.className="peh-file-group";
      const title=document.createElement("strong");title.textContent=o.service+" · "+o.id.slice(0,8);
      group.append(title);output.append(group);
      await getFilesForOrder(o,group);
+     if(!stillCurrent()){output.replaceChildren();return;}
    }
  }
  // Clear previously rendered student documents on every account transition.
@@ -160,14 +168,11 @@
    adminPanel.querySelector(".peh-file-results").textContent="Refresh files after administrator authentication.";
  }
  async function refreshFilesForAccount(admin,panel){
-   const version=++fileViewVersion;
+   if(!supabase){clearPrivateFiles();return;}
    const {data:auth}=await supabase.auth.getUser();
-   if(!auth?.user){clearPrivateFiles();return;}
+   if(!auth?.user){fileViewerUser=null;clearPrivateFiles();return;}
    if(fileViewerUser!==auth.user.id){fileViewerUser=auth.user.id;clearPrivateFiles();}
-   // The existing loader validates ownership via user_id; guard account switch
-   // by clearing all document rows as soon as authentication changes.
    await refreshFiles(admin,panel);
-   if(version!==fileViewVersion && fileViewerUser!==auth.user.id)clearPrivateFiles();
  }
  let fileChecks=0;
  const fileAuthReady=setInterval(()=>{
