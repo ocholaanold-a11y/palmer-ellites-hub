@@ -69,8 +69,26 @@ async function checkAdmin(user){
  $("admin").classList.toggle("hidden",!currentAdmin);
  if(currentAdmin) { await loadAdmin(); await loadWriterAdmin(); }
 }
+let activeAccountId=null;
+let accountRenderVersion=0;
 function showAuth(user){
  if(!supabase)return;
+ const nextAccountId=user?.id||null;
+ if(activeAccountId!==nextAccountId){
+   activeAccountId=nextAccountId;
+   accountRenderVersion++;
+   // Clear all previously rendered account-specific information before loading
+   // the new user's data. Important for shared computers/browser sessions.
+   $("ordersPanel").textContent="Loading projects for the current account…";
+   $("adminOrders").replaceChildren();
+   $("admin").classList.add("hidden");
+   currentAdmin=false;
+   const privateIds=["pehRevisionCustomerList","pehAdminDeliveryList","pehAdminRevisions","pehNotificationItems","pehWriterProjects","pehDraftOrders","pehWriterLinks"];
+   for(const id of privateIds){const el=$(id);if(el)el.replaceChildren();}
+   for(const el of document.querySelectorAll(".peh-file-results"))el.replaceChildren();
+   $("pehWriterWorkspace")?.classList.add("hidden");
+   $("pehNotificationsPanel")?.querySelector("#pehUnreadCount")?.replaceChildren();
+ }
  $("authState").textContent=user?"Signed in as "+user.email:"Sign in to view your requests and order progress.";
  $("signOut").classList.toggle("hidden",!user);
  $("signIn").classList.toggle("hidden",!!user);$("signUp").classList.toggle("hidden",!!user);
@@ -96,8 +114,11 @@ $("signUp").addEventListener("click",()=>authAction("signup"));
 $("signOut").addEventListener("click",async()=>{if(supabase)await supabase.auth.signOut();});
 async function loadOrders(){
  if(!supabase)return;
- const {data:{user}}=await supabase.auth.getUser();if(!user)return;
+ const version=accountRenderVersion;
+ const {data:{user}}=await supabase.auth.getUser();
+ if(!user||activeAccountId!==user.id||version!==accountRenderVersion)return;
  const {data,error}=await supabase.from("orders").select("id,service,description,deadline,status,created_at,requested_currency,quote_amount").eq("user_id",user.id).order("created_at",{ascending:false}).limit(30);
+ if(activeAccountId!==user.id||version!==accountRenderVersion)return;
  if(error){$("ordersPanel").innerHTML='<p>Orders will appear when the secure PEH database and access policies are configured.</p>';return;}
  $("ordersPanel").innerHTML=data?.length?data.map(o=>'<div class="screen-line"><div><b>'+escapeHtml(o.service)+'</b><small>'+escapeHtml(new Date(o.created_at).toLocaleDateString())+' · '+escapeHtml(o.status)+(o.quote_amount!=null?' · Quote: '+escapeHtml(o.requested_currency)+' '+escapeHtml(Number(o.quote_amount).toFixed(2)):'')+'</small></div></div>').join(""):'<div class="empty-state"><div class="empty-icon">📦</div><b>No projects yet</b><p>Your project updates will appear here.</p></div>';
 }
