@@ -8,6 +8,7 @@
  const BUCKET="peh-order-files";
  const allowed=new Set(["pdf","doc","docx","txt","xls","xlsx","csv","ppt","pptx","png","jpg","jpeg"]);
  const maxBytes=50*1024*1024;
+ const MAX_FILES=10;
  const $=id=>document.getElementById(id);
  const safe=s=>String(s||"").replace(/[^a-zA-Z0-9._-]/g,"_").slice(-75)||"attachment";
  const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -49,9 +50,10 @@
    e.preventDefault();
    e.stopImmediatePropagation();
    if(busy)return;
-   const file=$("attachment").files[0];
-   if(file && file.size>maxBytes)return alertError("Choose a file no larger than 50 MB.");
-   if(file && (!file.size||!allowed.has(file.name.split(".").pop().toLowerCase())))return alertError("Choose a nonempty PDF, Word, Excel, PowerPoint, CSV, text, PNG or JPG file.");
+   const files=Array.from($("attachment").files);
+   if(files.length>MAX_FILES)return alertError("Choose up to "+MAX_FILES+" files per request.");
+   if(files.some(file=>file.size>maxBytes))return alertError("Each file must be no larger than 50 MB.");
+   if(files.some(file=>!file.size||!allowed.has(file.name.split(".").pop().toLowerCase())))return alertError("Select only nonempty PDF, Word, Excel, PowerPoint, CSV, text, PNG or JPG files.");
    if(!supabase)return alertError("The order service is unavailable. Nothing has been saved.");
    const deadline=new Date($("deadline").value);
    if(!Number.isFinite(deadline.valueOf())||deadline<=new Date())return alertError("Select a valid future deadline.");
@@ -69,18 +71,26 @@
      if(error||!data?.id)return alertError("Order could not be saved: "+(error?.message||"no confirmation from database"));
      createdOrder=data.id;
      let note="Your request was saved successfully.";
-     if(file){
-       submit.textContent="Uploading attachment…";
+     let uploaded=0;
+     const failed=[];
+     for(const [index,file] of files.entries()){
        const path=user.id+"/"+data.id+"/"+crypto.randomUUID()+"-"+safe(file.name);
        try{
-         await uploadAttachment(file,path,percent=>{submit.textContent="Uploading attachment: "+percent+"%";});
-         note+=" Your attachment was also uploaded securely.";
+         await uploadAttachment(file,path,percent=>{
+           submit.textContent="Uploading "+(index+1)+"/"+files.length+": "+percent+"%";
+           showNotice("requestStatus","Uploading "+(index+1)+" of "+files.length+": "+file.name+" ("+percent+"%)","");
+         });
+         uploaded++;
        }catch(uploadErr){
-         note+=" However, the attachment FAILED to upload: "+(uploadErr?.message||String(uploadErr))+". Do not resubmit the entire request; contact support with the reference number.";
+         failed.push(file.name+" ("+(uploadErr?.message||String(uploadErr))+")");
        }
      }
-     displaySubmissionFeedback(true,"Congratulations! Your task has been received.",note+" Our team will review your requirements and prepare your quotation. You can follow your order under My Account.",createdOrder);
-     showNotice("requestStatus","Order saved. "+(file?"Check the attachment status in the confirmation above.":""),"success");
+     if(files.length){
+       note+=" "+uploaded+" of "+files.length+" attachments uploaded.";
+       if(failed.length)note+=" Failed: "+failed.join("; ")+". The order and successful uploads are saved. Do NOT resubmit the entire order; contact PEH with the request reference and the failed filenames.";
+     }
+     displaySubmissionFeedback(true,failed.length?"Your order was saved, but some files failed.":"Congratulations! Your task has been received.",note+" Our team will review your requirements and prepare your quotation. You can follow your order under My Account.",createdOrder);
+     showNotice("requestStatus",failed.length?"Order saved with "+failed.length+" failed file(s). Check the confirmation above.":"Order saved. "+(files.length?uploaded+" attachments uploaded.":""),failed.length?"error":"success");
      form.reset();$("selectedCurrency").textContent=$("currencyInput").value;
      await loadOrders();if(currentAdmin)loadAdmin();
    }catch(err){
