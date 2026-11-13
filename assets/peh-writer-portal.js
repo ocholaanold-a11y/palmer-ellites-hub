@@ -132,10 +132,9 @@
   },700);
   document.addEventListener("visibilitychange",()=>{if(!document.hidden)refreshWriter();});
   // Admin can link a verified Supabase Auth user to one existing writer profile.
-  const adminControls=document.createElement("section");
-  adminControls.className="panel peh-writer-linking";
-  adminControls.innerHTML='<h3>Writer account access</h3><p>Create a professional profile first. Have each specialist register an adult PEH account and confirm their email. Copy their user UUID from Supabase Authentication → Users, then link it below. Only authorized administrators can link or remove accounts.</p><form id="pehLinkWriterForm"><label>Writer profile<select id="pehLinkWriterId" required><option value="">Select verified specialist</option></select></label><label>Supabase Auth user UUID<input id="pehWriterAuthId" type="text" required placeholder="00000000-0000-0000-0000-000000000000" pattern="[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"></label><button class="button primary" type="submit">Authorize writer account</button><p id="pehWriterLinkStatus" class="form-status" role="status" aria-live="polite"></p></form><button class="button secondary" id="pehWriterLinksRefresh" type="button">Refresh writer account links</button><div id="pehWriterLinks"></div>';
-  $("writerAdminList")?.after(adminControls);
+  // The writer access form is in the page HTML so it remains visible and discoverable.
+  const adminControls=$("pehWriterAccountSection");
+  if(!adminControls)return;
   const linkStatus=$("pehWriterLinkStatus"),select=$("pehLinkWriterId");
   function showLinkError(msg){linkStatus.textContent=msg;linkStatus.className="form-status feedback-error";}
   async function refreshLinks(){
@@ -179,4 +178,24 @@
   const refreshAdmin= document.getElementById("refreshAdmin");
   refreshAdmin?.addEventListener("click",refreshLinks);
   document.getElementById("signIn")?.addEventListener("click",()=>setTimeout(refreshLinks,1800));
+  // Load writer profiles when an administrator opens their workspace, and
+  // keep the profile dropdown ready even before the user clicks refresh.
+  let pendingLinks=false;
+  async function refreshLinksAfterAuth(){
+    if(pendingLinks)return;
+    pendingLinks=true;
+    try{
+      const {data:auth}=await supabase.auth.getUser();
+      if(!auth?.user)return;
+      const {data:membership}=await supabase.from("peh_admins").select("user_id").eq("user_id",auth.user.id).maybeSingle();
+      if(membership)await refreshLinks();
+    }catch(err){showLinkError("Could not refresh writer accounts: "+(err?.message||String(err)));}
+    finally{pendingLinks=false;}
+  }
+  const linkReload=setInterval(()=>{
+    if(typeof supabase!=="undefined"&&supabase){clearInterval(linkReload);refreshLinksAfterAuth();}
+  },700);
+  document.addEventListener("visibilitychange",()=>{if(!document.hidden)refreshLinksAfterAuth();});
+  document.querySelector('a[href="#admin"]')?.addEventListener("click",refreshLinksAfterAuth);
+
 })();
