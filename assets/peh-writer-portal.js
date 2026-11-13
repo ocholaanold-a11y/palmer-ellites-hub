@@ -14,9 +14,10 @@
   const whitelist=new Set(["pdf","doc","docx","txt","xls","xlsx","csv","ppt","pptx","png","jpg","jpeg"]);
   const clean=name=>String(name).replace(/[^a-zA-Z0-9._-]/g,"_").slice(-75);
   const maxSize=50*1024*1024;
+  const DRAFT_BUCKET="peh-writer-drafts";
   async function fileUpload(file,path,onProgress){
     if(file.size<=6*1024*1024){
-      const {error}=await supabase.storage.from("peh-order-files").upload(path,file,{upsert:false,contentType:file.type||"application/octet-stream"});
+      const {error}=await supabase.storage.from(DRAFT_BUCKET).upload(path,file,{upsert:false,contentType:file.type||"application/octet-stream"});
       if(error)throw error;
       onProgress(100);return;
     }
@@ -28,7 +29,7 @@
       const upload=new Upload(file,{
         endpoint:"https://"+hostname+"/storage/v1/upload/resumable",
         headers:{authorization:"Bearer "+session.access_token,apikey:window.PEH_CONFIG.supabaseAnonKey,"x-upsert":"false"},
-        metadata:{bucketName:"peh-order-files",objectName:path,contentType:file.type||"application/octet-stream",cacheControl:"3600"},
+        metadata:{bucketName:DRAFT_BUCKET,objectName:path,contentType:file.type||"application/octet-stream",cacheControl:"3600"},
         uploadDataDuringCreation:true,chunkSize:6*1024*1024,
         removeFingerprintOnSuccess:true,retryDelays:[0,3000,5000,10000,20000],
         onProgress:(done,total)=>onProgress(Math.round(done*100/total)),onError:reject,onSuccess:resolve
@@ -105,13 +106,13 @@
           let uploaded=0;const failures=[];
           try{
             for(const [i,file] of selected.entries()){
-              const path=o.user_id+"/"+o.id+"/DELIVERED-"+crypto.randomUUID()+"-"+clean(file.name);
+              const path=o.user_id+"/"+o.id+"/DRAFT-"+crypto.randomUUID()+"-"+clean(file.name);
               try{
                 await fileUpload(file,path,pct=>{progress.textContent="Uploading "+(i+1)+"/"+selected.length+": "+file.name+" ("+pct+"%)";});
                 uploaded++;
               }catch(err){failures.push(file.name+": "+(err?.message||String(err)));}
             }
-            progress.textContent=uploaded+" of "+selected.length+" files sent to PEH."+(failures.length?" Failed: "+failures.join("; ")+". Check uploaded files before trying again.":" An administrator must review and mark the order Delivered.");
+            progress.textContent=uploaded+" of "+selected.length+" draft files sent to PEH for approval."+(failures.length?" Failed: "+failures.join("; ")+". Check uploaded files before trying again.":" An administrator must review and mark the order Delivered.");
             if(!failures.length)input.value="";
           }finally{upload.disabled=false;input.disabled=false;}
         });
