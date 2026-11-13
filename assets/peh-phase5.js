@@ -93,14 +93,28 @@
   adminPanel.innerHTML='<h3>Order Deliveries & Revision Management</h3><p>Upload a completed document to an existing order, or review a customer revision request. Files remain private.</p><button type="button" class="button secondary" id="pehLoadAdminDelivery">Refresh deliveries & revisions</button><p id="pehDeliveryStatus" class="form-status" role="status" aria-live="polite"></p><div id="pehAdminDeliveryList"></div><div id="pehAdminRevisions"></div>';
   $("adminOrders")?.after(adminPanel);
   const adminOrders=$("pehAdminDeliveryList"),adminRevisions=$("pehAdminRevisions"),adminStatus=$("pehDeliveryStatus");
+  let loadingAdminDelivery=false;
   async function loadAdminDeliveries(){
-    if(!supabase)return;
-    const {data:{user}}=await supabase.auth.getUser();
-    if(!user){adminPanel.classList.add("hidden");return;}
-    const {data:membership,error:memberError}=await supabase.from("peh_admins").select("user_id").eq("user_id",user.id).maybeSingle();
-    if(memberError||!membership){adminPanel.classList.add("hidden");return;}
+    // Immediately display the panel and scroll to it. Previously it only appeared
+    // after asynchronous authorization, and was inserted above the open button.
     adminPanel.classList.remove("hidden");
-    const {data:orders,error}=await supabase.from("orders").select("id,user_id,service,status,created_at").order("created_at",{ascending:false}).limit(50);
+    adminPanel.scrollIntoView({behavior:"smooth",block:"start"});
+    adminPanel.setAttribute("tabindex","-1");
+    adminPanel.focus({preventScroll:true});
+    if(loadingAdminDelivery)return;
+    loadingAdminDelivery=true;
+    adminOrders.replaceChildren();
+    adminRevisions.replaceChildren();
+    textNotice(adminStatus,"Opening delivery management…");
+    try{
+      if(!supabase){textNotice(adminStatus,"The secure account service is not connected. Reload the page and sign in again.",true);return;}
+      const {data:auth,error:authError}=await supabase.auth.getUser();
+      if(authError||!auth?.user){textNotice(adminStatus,"Please sign in to your PEH administrator account.",true);return;}
+      const {data:membership,error:memberError}=await supabase.from("peh_admins").select("user_id").eq("user_id",auth.user.id).maybeSingle();
+      if(memberError){textNotice(adminStatus,"Unable to verify administrator access: "+memberError.message,true);return;}
+      if(!membership){textNotice(adminStatus,"This account is not authorized as a PEH administrator.",true);return;}
+      textNotice(adminStatus,"Administrator verified. Loading orders and revisions…");
+      const {data:orders,error}=await supabase.from("orders").select("id,user_id,service,status,created_at").order("created_at",{ascending:false}).limit(50);
     if(error){textNotice(adminStatus,error.message,true);return;}
     adminOrders.replaceChildren();
     if(!orders?.length)adminOrders.textContent="No customer orders yet.";
@@ -154,6 +168,11 @@
       wrap.append(select,note,btn,feedback);adminRevisions.append(wrap);
     }
     textNotice(adminStatus,"Orders and revision requests loaded.");
+    }catch(err){
+      textNotice(adminStatus,"Delivery management could not load: "+(err?.message||String(err)),true);
+    }finally{
+      loadingAdminDelivery=false;
+    }
   }
   $("pehLoadAdminDelivery").addEventListener("click",loadAdminDeliveries);
   // Reveal only for a verified administrator upon explicit refresh action.
@@ -161,6 +180,12 @@
   // backend policies independently verify access.
   let action=make("button","button secondary","Open delivery management");
   action.type="button";
+  action.id="pehOpenDelivery";
+  action.setAttribute("aria-controls","pehAdminDeliveryPanel");
+  adminPanel.id="pehAdminDeliveryPanel";
   action.addEventListener("click",loadAdminDeliveries);
-  $("admin")?.querySelector(".admin-panel")?.append(action);
+  const adminWorkspace=$("admin")?.querySelector(".admin-panel");
+  // Put the action before its destination panel, not after it.
+  if(adminWorkspace)adminWorkspace.insertBefore(action,$("adminOrders"));
+  else $("admin")?.append(action);
 })();
