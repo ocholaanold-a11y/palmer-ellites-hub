@@ -84,3 +84,12 @@
 .peh-writer-linking label{display:block}
 .peh-writer-linking input,.peh-writer-linking select{display:block;width:100%;min-height:44px}
 .peh-writer-linking .peh-file-row span{overflow-wrap:anywhere}
+
+/* Secure account recovery and signed-in password changes */
+.peh-password-actions{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0}
+.peh-password-panel{margin:15px 0;padding:18px;border:1px solid var(--line);border-radius:12px;background:#f8faf9}
+.peh-password-panel h4{margin:0 0 9px;font-size:18px}
+.peh-password-panel p{margin:6px 0 12px}
+.peh-password-panel label{display:block;margin:10px 0}
+.peh-password-panel input{display:block;width:100%;min-height:44px}
+.peh-password-panel .button-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
