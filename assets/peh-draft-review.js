@@ -5,10 +5,9 @@
   const admin=document.getElementById("admin");
   if(!admin)return;
   const DRAFT="peh-writer-drafts",FINAL="peh-order-files",MAX=50*1024*1024;
-  const panel=document.createElement("section");
-  panel.className="panel peh-draft-review";
-  panel.innerHTML='<h3>Review writer draft submissions</h3><p>Drafts are private to authorized PEH staff. Review all files before approving them for customer delivery. Once approved, the customer can access the files and receives a website notification.</p><button type="button" class="button secondary" id="pehReviewDrafts">Load writer drafts</button><p class="form-status" id="pehDraftStatus" role="status" aria-live="polite"></p><div id="pehDraftOrders"></div>';
-  document.getElementById("writerAdminList")?.after(panel);
+  // The review panel is rendered in the static administrator HTML.
+  const panel=document.getElementById("pehDraftReviewSection");
+  if(!panel)return;
   const status=document.getElementById("pehDraftStatus"),list=document.getElementById("pehDraftOrders");
   const make=(tag,cls,text)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(text!==undefined)e.textContent=text;return e;};
   const message=(el,text,bad=false)=>{el.textContent=text;el.className="form-status "+(bad?"feedback-error":"");};
