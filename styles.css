@@ -72,3 +72,15 @@
 .peh-notification p{margin:0 0 7px;font-size:14px}
 .peh-notification small{display:block;color:var(--muted);margin-bottom:10px}
 .peh-notification .button-row{margin:10px 0 0;gap:8px}
+
+/* Phase 7 - private writer dashboard and account links */
+#pehWriterWorkspace{scroll-margin-top:80px}
+#pehWriterWorkspace .peh-revision-item{margin-top:16px}
+#pehWriterWorkspace .peh-writer-docs{margin:12px 0}
+#pehWriterWorkspace .peh-writer-docs .peh-file-row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+#pehWriterWorkspace textarea{white-space:pre-wrap}
+.peh-writer-linking{margin-top:24px}
+.peh-writer-linking form{display:grid;gap:12px;margin:15px 0}
+.peh-writer-linking label{display:block}
+.peh-writer-linking input,.peh-writer-linking select{display:block;width:100%;min-height:44px}
+.peh-writer-linking .peh-file-row span{overflow-wrap:anywhere}
