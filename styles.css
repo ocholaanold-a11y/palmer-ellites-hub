@@ -244,3 +244,15 @@
 .peh-safety-report label{margin-top:12px}
 .peh-safety-report select{max-width:270px;margin:10px 0}
 .peh-safety-report button{margin-right:10px;margin-bottom:10px}
+
+
+/* Distinct entry choices for each authenticated PEH account type */
+.peh-login-panel{min-width:0}
+.peh-login-subtitle{margin-bottom:15px}
+.peh-role-choice{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:14px 0 12px}
+.peh-role-option{min-height:54px;border:1px solid #ceded3;border-radius:12px;padding:10px 7px;background:#f6faf7;color:#214b39;font-weight:750;font-size:12px;text-align:center;line-height:1.4}
+.peh-role-option:hover{border-color:#a78440;background:#fff8eb}
+.peh-role-option.is-selected{border:2px solid #08764e;background:linear-gradient(125deg,#eaf7ef,#fff7e8);color:#075c3f;box-shadow:0 2px 8px rgba(8,118,78,.08)}
+.peh-role-option:focus-visible{outline:3px solid #c49a40;outline-offset:2px}
+.peh-role-description{font-size:12px!important;min-height:36px;margin:0 0 14px;color:#5a6f62}
+@media(max-width:500px){.peh-role-choice{grid-template-columns:1fr;gap:7px}.peh-role-option{min-height:43px;text-align:left;padding:10px 14px}.peh-role-description{min-height:auto}}
