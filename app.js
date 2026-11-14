@@ -91,6 +91,48 @@ async function checkAdmin(user){
 }
 let activeAccountId=null;
 let accountRenderVersion=0;
+// Role buttons select a login destination, NOT a permission.
+// Supabase peh_admins / peh_writer_accounts and RLS grant actual access.
+let pehSelectedLoginRole="client";
+const pehRoleNames={client:"Client",writer:"Writer",admin:"Administrator"};
+const pehRoleDescriptions={
+  client:"For clients submitting requests, tracking projects and downloading completed documents.",
+  writer:"For verified PEH writers whose accounts have been approved and linked by an administrator.",
+  admin:"For authorized PEH administrators managing orders, writers, messaging and safety reports."
+};
+function selectPehLoginRole(role){
+ if(!["client","writer","admin"].includes(role))return;
+ pehSelectedLoginRole=role;
+ for(const btn of document.querySelectorAll("[data-peh-role]")){
+   const active=btn.dataset.pehRole===role;
+   btn.classList.toggle("is-selected",active);
+   btn.setAttribute("aria-pressed",String(active));
+ }
+ $("pehLoginHeading").textContent=pehRoleNames[role]+" Login";
+ $("pehRoleDescription").textContent=pehRoleDescriptions[role];
+ $("signIn").textContent="Sign in as "+pehRoleNames[role];
+ $("signUp").classList.toggle("hidden",role!=="client"||Boolean(activeAccountId));
+ if(role!=="client"){
+   $("pehResetRequestForm").classList.add("hidden");
+ }
+ if(role==="writer")showNotice("authStatus","Writer access requires approval and linking to a PEH specialist profile.","");
+ else if(role==="admin")showNotice("authStatus","Administrator access is granted only to authorized PEH accounts.","");
+ else showNotice("authStatus","","");
+}
+document.querySelectorAll("[data-peh-role]").forEach(btn=>
+ btn.addEventListener("click",()=>selectPehLoginRole(btn.dataset.pehRole))
+);
+async function pehVerifySelectedRole(user){
+ if(pehSelectedLoginRole==="client")return true;
+ const table=pehSelectedLoginRole==="admin"?"peh_admins":"peh_writer_accounts";
+ const columns=pehSelectedLoginRole==="admin"?"user_id":"user_id,suspended";
+ const {data,error}=await supabase.from(table).select(columns).eq("user_id",user.id).maybeSingle();
+ if(error)throw error;
+ if(!data)return false;
+ if(pehSelectedLoginRole==="writer"&&data.suspended)return false;
+ return true;
+}
+
 function showAuth(user){
  if(!supabase)return;
  const nextAccountId=user?.id||null;
@@ -111,7 +153,7 @@ function showAuth(user){
  }
  $("authState").textContent=user?"Signed in as "+user.email:"Sign in to view your requests and order progress.";
  $("signOut").classList.toggle("hidden",!user);
- $("signIn").classList.toggle("hidden",!!user);$("signUp").classList.toggle("hidden",!!user);
+ $("signIn").classList.toggle("hidden",!!user);$("signUp").classList.toggle("hidden",!!user||pehSelectedLoginRole!=="client");
  $("authPassword").required=!user;$("authEmail").required=!user;
  $("authForm").classList.toggle("hidden",!!user);
  $("pehForgotPassword").classList.toggle("hidden",!!user);
@@ -126,11 +168,31 @@ async function authAction(type){
  if(!email||password.length<8)return showNotice("authStatus","Enter an email address and password (at least 8 characters).","error");
  let result;
  if(type==="signup"){
+  if(pehSelectedLoginRole!=="client")return showNotice("authStatus","Writer and administrator access is approval-only. Create a client account first, then request PEH authorization.","error");
   if(!confirm("Please confirm you are at least 18 years old. Under-18 registration is not available in this launch version."))return;
   result=await supabase.auth.signUp({email,password});
  }else result=await supabase.auth.signInWithPassword({email,password});
  if(result.error)return showNotice("authStatus",result.error.message,"error");
- showNotice("authStatus",type==="signup"?"Account request received. Check email for verification, if required.":"Signed in successfully.","success");
+ if(type==="signin"){
+   try{
+     const account=result.data?.user;
+     if(!account)throw new Error("Please verify your account and try signing in again.");
+     const permitted=await pehVerifySelectedRole(account);
+     if(!permitted){
+       await supabase.auth.signOut();
+       return showNotice("authStatus","This account does not have "+pehRoleNames[pehSelectedLoginRole].toLowerCase()+" access. Select the correct login type or contact PEH Administration for authorization.","error");
+     }
+     showNotice("authStatus","Signed in successfully as "+pehRoleNames[pehSelectedLoginRole]+".","success");
+     if(pehSelectedLoginRole==="admin")window.location.hash="admin";
+     else if(pehSelectedLoginRole==="writer")setTimeout(()=>document.getElementById("pehWriterWorkspace")?.scrollIntoView({behavior:"smooth",block:"start"}),400);
+     else window.location.hash="dashboard";
+   }catch(err){
+     await supabase.auth.signOut();
+     showNotice("authStatus","Unable to verify this login type: "+(err?.message||String(err)),"error");
+   }
+ }else{
+   showNotice("authStatus","Account request received. Check email for verification, if required.","success");
+ }
 }
 $("signIn").addEventListener("click",()=>authAction("signin"));
 $("signUp").addEventListener("click",()=>authAction("signup"));
