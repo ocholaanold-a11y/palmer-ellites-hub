@@ -256,3 +256,47 @@
 .peh-role-option:focus-visible{outline:3px solid #c49a40;outline-offset:2px}
 .peh-role-description{font-size:12px!important;min-height:36px;margin:0 0 14px;color:#5a6f62}
 @media(max-width:500px){.peh-role-choice{grid-template-columns:1fr;gap:7px}.peh-role-option{min-height:43px;text-align:left;padding:10px 14px}.peh-role-description{min-height:auto}}
+
+
+/* PEH unified workspace information architecture – November 2026 */
+#dashboard .container > .peh-workspace-nav,
+#admin .container > .peh-workspace-nav,
+#pehWriterWorkspace .container > .peh-workspace-nav{margin:25px 0 30px}
+.peh-workspace-nav{padding:22px;border:1px solid #dfebdd;border-radius:22px;background:linear-gradient(115deg,#f2faf5,#fffaf0);box-shadow:0 9px 27px rgba(12,69,45,.045)}
+.peh-workspace-nav-heading{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:17px}
+.peh-workspace-nav-heading strong{font-family:Outfit,sans-serif;color:#0b4734;font-size:19px}
+.peh-workspace-nav-heading span{font-size:12px;color:#637b6e}
+.peh-workspace-links{display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr));gap:11px}
+.peh-workspace-link{display:flex;align-items:center;gap:10px;min-height:70px;padding:12px 14px;border:1px solid #e2eadf;background:white;border-radius:14px;box-shadow:0 2px 8px rgba(20,70,40,.025);transition:border-color .18s,transform .18s,box-shadow .18s}
+.peh-workspace-link:hover,.peh-workspace-link:focus-visible{border-color:#c49a40;transform:translateY(-2px);box-shadow:0 6px 17px rgba(21,71,44,.09)}
+.peh-workspace-link-icon{flex-shrink:0;font-size:22px;line-height:1}
+.peh-workspace-link-words{display:flex;flex:1;flex-direction:column;gap:4px;min-width:0}
+.peh-workspace-link-words strong{font-size:13px;color:#153f30;line-height:1.35}
+.peh-workspace-link-words small{font-size:11px;color:#6e8075;line-height:1.35}
+.peh-workspace-link-arrow{font-size:15px;color:#9d7932}
+.peh-workspace-section{margin:30px 0 42px;scroll-margin-top:112px}
+.peh-workspace-section-heading{display:flex;flex-direction:column;align-items:flex-start;gap:6px;margin-bottom:18px;padding:0 0 14px;border-bottom:1px solid #d9e8dc}
+.peh-section-eyebrow{font-size:11px;font-weight:800;color:#97712d;letter-spacing:.14em;text-transform:uppercase}
+.peh-workspace-section-heading h3{font-size:clamp(1.3rem,2.4vw,1.75rem);color:#0d4835;margin:0}
+.peh-workspace-section-heading p{font-size:13px;line-height:1.6;margin:0;max-width:760px}
+.peh-workspace-section-content{display:grid;grid-template-columns:minmax(0,1fr);gap:18px}
+.peh-workspace-section-content > .panel,.peh-workspace-section-content > section.panel{min-width:0;margin:0}
+.peh-workspace-section-content > .dashboard-grid{margin:0}
+.peh-workspace-section-content > .button{justify-self:start}
+.peh-workspace-section .peh-message-panel,.peh-workspace-section .peh-notifications-panel,.peh-workspace-section .peh-private-files,.peh-workspace-section .peh-revision-panel,.peh-workspace-section .peh-safeguard-review,.peh-workspace-section .peh-draft-review{margin:0}
+.peh-workspace-section .peh-file-row{min-width:0;overflow-wrap:anywhere}
+#pehAdminRequests .admin-panel,#pehAdminWriters .writer-admin-panel{width:100%}
+#pehAdminDelivery .peh-delivery-panel{scroll-margin-top:105px}
+#dashboard .peh-workspace-section-content > .dashboard-grid{width:100%}
+@media(max-width:650px){
+ .peh-workspace-nav{padding:15px;margin:18px 0!important;border-radius:16px}
+ .peh-workspace-links{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+ .peh-workspace-link{padding:10px;gap:8px;min-height:74px;align-items:flex-start}
+ .peh-workspace-link-icon{font-size:18px;margin-top:3px}
+ .peh-workspace-link-words strong{font-size:12px}
+ .peh-workspace-link-words small{font-size:10px}
+ .peh-workspace-link-arrow{display:none}
+ .peh-workspace-section{margin:24px 0 32px;scroll-margin-top:82px}
+}
+@media(max-width:390px){.peh-workspace-links{grid-template-columns:1fr}.peh-workspace-link{min-height:56px;align-items:center}}
+@media(prefers-reduced-motion:reduce){.peh-workspace-link{transition:none}.peh-workspace-link:hover{transform:none}}
