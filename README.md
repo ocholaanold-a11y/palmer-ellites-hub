@@ -176,6 +176,17 @@ Under **Administrator Workspace → Safety reports & writer conduct**, authorize
 
 **Important before production:** Browser hiding is not authorization. Inspect Supabase RLS and GRANT permissions regularly, especially after future changes. This feature uses polling rather than a Supabase Realtime subscription. Implement more robust anti-abuse and moderation, retention/deletion requests, message notifications and incident logging before collecting sensitive customer data. Never place service-role or other server secrets in the website.
 
+## Distinct login choices for PEH clients, writers and administrators
+
+The **My Account** panel now has three clear choices: **Client Login**, **Writer Login**, and **Administrator Login**. This is one Supabase Auth system with distinct **authorized destinations** — choosing a login type cannot create a role or elevate a user's permissions.
+
+- **Client Login**: normal adult-account registration and login; private client orders, files, messages, notifications.
+- **Writer Login**: existing account must be verified and linked in `peh_writer_accounts`. PEH checks membership and suspension status before accepting this entry. Writer profiles alone are not accounts; their access is approved by the administrator.
+- **Administrator Login**: an account must already be listed in `peh_admins`. PEH checks that membership before accepting entry to the administrator workspace. Public registration does not confer administrator access.
+- **Forgot Password?** remains available regardless of the selected login type while signed out, and **Change Password** remains available when signed in.
+
+**Testing:** After Cloudflare deploys, hard-refresh, sign in using an authorized account in each category and verify that the correct workspace is accessible. Try the writer and admin choices using an ordinary client account; it should reject those login types and sign out instead. All sensitive operations still require Supabase database policies. Some authorized admin/writer accounts may also possess ordinary client capabilities; the login selection is a navigation and verification layer rather than a hard separation of credentials.
+
 ## Deploy for free on Cloudflare Pages
 
 1. Log in to [Cloudflare](https://dash.cloudflare.com/) and open **Workers & Pages**.
