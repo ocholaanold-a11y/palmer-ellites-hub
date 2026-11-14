@@ -188,6 +188,8 @@ $("pehResetRequestForm").addEventListener("submit",async e=>{
 });
 $("pehNewPasswordForm").addEventListener("submit",async e=>{
  e.preventDefault();
+ // currentTarget is cleared after the first await; retain the form reference.
+ const passwordForm=e.currentTarget;
  const next=$("pehNewPassword").value,confirmPassword=$("pehConfirmPassword").value;
  if(next.length<12)return pehPasswordMessage("pehNewPasswordStatus","Use a password with at least 12 characters.",true);
  if(next!==confirmPassword)return pehPasswordMessage("pehNewPasswordStatus","Passwords do not match.",true);
@@ -200,8 +202,8 @@ $("pehNewPasswordForm").addEventListener("submit",async e=>{
    const {error}=await supabase.auth.updateUser({password:next});
    if(error)throw error;
    pehPasswordRecoveryMode=false;
-   e.currentTarget.reset();
-   e.currentTarget.classList.add("hidden");
+   passwordForm.reset();
+   passwordForm.classList.add("hidden");
    $("pehChangePassword").classList.remove("hidden");
    pehPasswordMessage("authStatus","Your password has been updated successfully. Your account permissions and assigned projects are unchanged.");
  }catch(err){
