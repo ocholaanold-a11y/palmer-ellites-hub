@@ -187,6 +187,18 @@ The **My Account** panel now has three clear choices: **Client Login**, **Writer
 
 **Testing:** After Cloudflare deploys, hard-refresh, sign in using an authorized account in each category and verify that the correct workspace is accessible. Try the writer and admin choices using an ordinary client account; it should reject those login types and sign out instead. All sensitive operations still require Supabase database policies. Some authorized admin/writer accounts may also possess ordinary client capabilities; the login selection is a navigation and verification layer rather than a hard separation of credentials.
 
+## PEH workspace organization and navigation
+
+The website now loads `assets/peh-workspace-layout.js` **after** the existing features, so it can organize already-initialized controls without recreating forms, changing SQL policies, or modifying Supabase permissions. Each signed-in user can use role-specific **Quick access** links:
+
+- **Client:** My account & order tracking; My documents; Notifications & revisions; Order messages.
+- **Writer:** My assigned work (download source files, upload drafts); Project messages.
+- **Administrator:** Orders, quotes & assignments; Review & deliver documents; Writer profiles & account access; Order conversations; Safety reports & conduct.
+
+The layout reuses the existing components and their event handlers, and keeps existing links and IDs for compatibility. The client dashboard remains available at `#dashboard`, writer dashboard is shown only to linked writer accounts, and administrator controls remain protected by the account check and Supabase Row Level Security. Responsive links and section headings make it easier to navigate on mobile devices.
+
+**Test after deployment:** hard refresh, then inspect every Quick access link as a client, linked writer and administrator. Check that order lists, document upload/download, revisions, notifications, writer authorization, draft approval, private messages, and safeguarding reports still work. Test with only harmless accounts/documents. This is a layout improvement, not a replacement for a formal authorization/security audit.
+
 ## Deploy for free on Cloudflare Pages
 
 1. Log in to [Cloudflare](https://dash.cloudflare.com/) and open **Workers & Pages**.
