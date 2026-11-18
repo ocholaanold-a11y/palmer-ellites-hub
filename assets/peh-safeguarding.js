@@ -16,6 +16,13 @@
   if(anchor)anchor.before(section);else root.append(section);
   const status=document.getElementById("pehSafetyReportStatus");
   const list=document.getElementById("pehSafetyReportList");
+  const blockedHeading=el("h4","","Blocked message attempts");
+  const blockedIntro=el("p","muted","Messages blocked by PEH safeguards are logged here without retaining the rejected message text.");
+  const blockedButton=el("button","button secondary","Load blocked attempts");
+  blockedButton.type="button";
+  const blockedStatus=el("p","form-status");
+  const blockedList=el("div","");
+  section.append(blockedHeading,blockedIntro,blockedButton,blockedStatus,blockedList);
   const show=(message,error=false)=>{status.textContent=message;status.className="form-status "+(error?"feedback-error":"");};
   let loading=false;
   async function loadReports(){
@@ -100,5 +107,51 @@
     }catch(error){show("Unable to load reports: "+(error?.message||String(error)),true);}
     finally{loading=false;}
   }
+  async function loadBlockedAttempts(){
+    blockedButton.disabled=true;
+    blockedList.replaceChildren();
+    blockedStatus.textContent="Loading blocked attempts…";
+    try{
+      const {data:auth,error:authError}=await supabase.auth.getUser();
+      if(authError||!auth?.user)throw new Error("Sign in to your administrator account.");
+      const {data:admin,error:memberError}=await supabase.from("peh_admins")
+        .select("user_id").eq("user_id",auth.user.id).maybeSingle();
+      if(memberError||!admin)throw new Error("Administrator authorization required.");
+      const {data:items,error}=await supabase.from("peh_blocked_message_attempts")
+        .select("id,order_id,actor_id,actor_role,category,status,created_at,admin_note")
+        .order("created_at",{ascending:false}).limit(100);
+      if(error)throw error;
+      if(!items?.length){blockedStatus.textContent="No blocked message attempts recorded yet.";return;}
+      for(const item of items){
+        const card=el("article","peh-safety-report");
+        card.append(
+          el("strong","",item.category.replaceAll("_"," ")+" · "+item.status),
+          el("p","muted","Role: "+item.actor_role+" · Order: "+item.order_id.slice(0,8)+" · "+new Date(item.created_at).toLocaleString()),
+          el("p","muted","Account ID: "+item.actor_id)
+        );
+        const noteLabel=el("label","","Private administrator review note");
+        const note=el("textarea");note.maxLength=2000;note.rows=2;note.value=item.admin_note||"";noteLabel.append(note);
+        const state=el("select");
+        for(const value of ["open","reviewing","resolved"])state.append(new Option(value,value));
+        state.value=item.status;
+        const save=el("button","button secondary","Save incident review");save.type="button";
+        const feedback=el("p","form-status");
+        save.addEventListener("click",async()=>{
+          save.disabled=true;
+          try{
+            const {error:updateError}=await supabase.from("peh_blocked_message_attempts")
+              .update({status:state.value,admin_note:note.value.trim()}).eq("id",item.id);
+            if(updateError)throw updateError;
+            feedback.textContent="Incident review saved.";
+          }catch(error){feedback.textContent="Could not save review: "+(error?.message||String(error));}
+          finally{save.disabled=false;}
+        });
+        card.append(noteLabel,state,save,feedback);blockedList.append(card);
+      }
+      blockedStatus.textContent=items.length+" blocked attempt(s) loaded.";
+    }catch(error){blockedStatus.textContent="Unable to load blocked attempts: "+(error?.message||String(error));}
+    finally{blockedButton.disabled=false;}
+  }
+  blockedButton.addEventListener("click",loadBlockedAttempts);
   document.getElementById("pehLoadSafetyReports")?.addEventListener("click",loadReports);
 })();
