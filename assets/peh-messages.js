@@ -237,7 +237,25 @@
         view.setStatus("Message sent securely.");
         await view.loadMessages({quiet:true});
       }catch(err){
-        view.setStatus("Message not sent: "+(err?.message||String(err)),true);
+        const message=err?.message||String(err);
+        const blocked = err?.code==="23514" && /for safety|safeguarding rules/i.test(message);
+        if(blocked){
+          const lower=text.toLowerCase();
+          let category="other_safeguarding";
+          if(/https?:|www\\.|external link|t\\.me|wa\\.me/.test(lower)) category="external_link";
+          else if(/paypal|mpesa|m-pesa|cashapp|venmo|western union|crypto|bitcoin|pay me|send me money|transfer money|private payment/.test(lower)) category="off_platform_payment";
+          else if(/whatsapp|telegram|signal|snapchat|instagram|facebook|discord|skype|contact me|personal number/.test(lower)) category="off_platform_messaging";
+          else if(/email|phone|number|address|passport|national id|bank details|password|verification code|otp/.test(lower)) category="personal_information_request";
+          else if(/blackmail|expose you|report you unless|threaten|leak your|release your/.test(lower)) category="threat_or_extortion";
+          else if(/@|[0-9]{8,}/.test(lower)) category="contact_details";
+          try{
+            const {error:logError}=await supabase.rpc("peh_log_blocked_message_attempt",{
+              p_order_id:orderId,p_category:category
+            });
+            if(logError) console.warn("PEH blocked-attempt incident could not be logged:",logError.message);
+          }catch(logErr){console.warn("PEH blocked-attempt incident logging failed:",logErr);}
+        }
+        view.setStatus("Message not sent: "+message,true);
       }finally{send.disabled=false;}
     });
     // Keep this form hidden until a suitable order is selected.
