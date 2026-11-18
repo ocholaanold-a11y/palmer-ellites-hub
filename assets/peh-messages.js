@@ -242,7 +242,7 @@
         if(blocked){
           const lower=text.toLowerCase();
           let category="other_safeguarding";
-          if(/https?:|www\\.|external link|t\\.me|wa\\.me/.test(lower)) category="external_link";
+          if(/https?:|www\.|external link|t\.me|wa\.me/.test(lower)) category="external_link";
           else if(/paypal|mpesa|m-pesa|cashapp|venmo|western union|crypto|bitcoin|pay me|send me money|transfer money|private payment/.test(lower)) category="off_platform_payment";
           else if(/whatsapp|telegram|signal|snapchat|instagram|facebook|discord|skype|contact me|personal number/.test(lower)) category="off_platform_messaging";
           else if(/email|phone|number|address|passport|national id|bank details|password|verification code|otp/.test(lower)) category="personal_information_request";
